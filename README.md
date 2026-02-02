@@ -4,6 +4,14 @@ A configurable personality and mood system plugin for [OpenCode](https://opencod
 
 > **Note:** This project is not built by the OpenCode team and is not affiliated with OpenCode in any way.
 
+<div align="center">
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/joostvanwollingen/opencode-personality/pr.yml)
+[![NPM Downloads](https://img.shields.io/npm/dy/opencode-personality)](https://www.npmjs.com/package/opencode-personality)
+![GitHub Release](https://img.shields.io/github/v/release/joostvanwollingen/opencode-personality)
+
+</div>
+
 ## Example
 
 <p align="center">
