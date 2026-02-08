@@ -9,6 +9,57 @@ import type { PluginInput } from "@opencode-ai/plugin"
 export type MoodName = string
 
 /**
+ * Plugin configuration stored separately from personality config
+ * Tracks which personality is currently selected
+ */
+export type PluginConfig = {
+  /** Name of currently selected personality */
+  selectedPersonality: string | null
+}
+
+/**
+ * Metadata for a personality (used for listing available personalities)
+ */
+export type PersonalityMetadata = {
+  /** Unique personality name (filename without extension) */
+  name: string
+  /** Brief description for display */
+  description: string
+  /** Where this personality is stored */
+  source: "global" | "project"
+  /** Last modified timestamp */
+  modifiedAt: string
+}
+
+/**
+ * Result when loading a specific personality
+ */
+export type PersonalityLoadResult = {
+  /** The loaded personality configuration */
+  personality: PersonalityFile
+  /** Metadata about this personality */
+  metadata: PersonalityMetadata
+  /** Full path to the personality file */
+  path: string
+}
+
+/**
+ * Result of loading config with multi-personality support
+ */
+export type MultiPersonalityConfigResult = {
+  /** Currently selected personality config (null if none selected) */
+  personality: PersonalityFile | null
+  /** List of all available personalities */
+  available: PersonalityMetadata[]
+  /** Name of currently selected personality */
+  selectedName: string | null
+  /** Plugin configuration (selected personality tracking) */
+  pluginConfig: PluginConfig
+  /** Where the plugin config was loaded from */
+  source: "global" | "project" | "none"
+}
+
+/**
  * Configuration for the mood system
  */
 export type MoodConfig = {
