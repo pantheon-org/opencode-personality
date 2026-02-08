@@ -6,8 +6,12 @@ import type {
   MoodDefinition,
   MoodState,
   MoodName,
+  PersonalityMetadata,
+  PersonalityLoadResult,
+  MultiPersonalityConfigResult,
+  PluginConfig,
 } from "./types.js"
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync, statSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { homedir } from "node:os"
 
@@ -47,6 +51,12 @@ export const DEFAULT_MOODS: MoodDefinition[] = [
   },
 ]
 
+/** Directory name for storing multiple personality files */
+export const PERSONALITIES_DIR = "personalities"
+
+/** Legacy single-file config filename */
+export const OLD_PERSONALITY_FILENAME = "personality.json"
+
 export function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
   const result = { ...target }
   for (const key of Object.keys(source) as (keyof T)[]) {
@@ -84,11 +94,193 @@ export function tryLoadJson<T>(filePath: string): T | null {
   }
 }
 
-export function ensureDir(path: string): void {
-  const dir = dirname(path)
+export function ensureDir(filePath: string): void {
+  const dir = dirname(filePath)
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }
+}
+
+/** Get the personalities directory path for a given scope */
+export function getPersonalitiesDir(
+  scope: ConfigScope,
+  projectDir: string,
+  globalConfigDir: string
+): string {
+  const baseDir = scope === "global" ? globalConfigDir : join(projectDir, ".opencode")
+  return join(baseDir, PERSONALITIES_DIR)
+}
+
+/** List all available personalities from both scopes */
+export function listPersonalities(
+  projectDir: string,
+  globalConfigDir: string
+): PersonalityMetadata[] {
+  const personalities: Map<string, PersonalityMetadata> = new Map()
+
+  // Load global personalities first
+  const globalDir = getPersonalitiesDir("global", projectDir, globalConfigDir)
+  if (existsSync(globalDir)) {
+    for (const file of readdirSync(globalDir)) {
+      if (!file.endsWith(".json")) continue
+      
+      const name = file.slice(0, -5) // Remove .json
+      const filePath = join(globalDir, file)
+      const content = tryLoadJson<PersonalityFile>(filePath)
+      
+      if (content) {
+        const stats = statSync(filePath)
+        personalities.set(name, {
+          name,
+          description: content.description || "",
+          source: "global",
+          modifiedAt: stats.mtime.toISOString(),
+        })
+      }
+    }
+  }
+
+  // Override with project personalities (project takes precedence)
+  const projectDir2 = getPersonalitiesDir("project", projectDir, globalConfigDir)
+  if (existsSync(projectDir2)) {
+    for (const file of readdirSync(projectDir2)) {
+      if (!file.endsWith(".json")) continue
+      
+      const name = file.slice(0, -5)
+      const filePath = join(projectDir2, file)
+      const content = tryLoadJson<PersonalityFile>(filePath)
+      
+      if (content) {
+        const stats = statSync(filePath)
+        personalities.set(name, {
+          name,
+          description: content.description || "",
+          source: "project",
+          modifiedAt: stats.mtime.toISOString(),
+        })
+      }
+    }
+  }
+
+  return Array.from(personalities.values())
+}
+
+/** Load a specific personality by name */
+export function loadPersonality(
+  name: string,
+  projectDir: string,
+  globalConfigDir: string
+): PersonalityLoadResult | null {
+  // Try project first
+  const projectPersonalitiesDir = getPersonalitiesDir("project", projectDir, globalConfigDir)
+  const projectPath = join(projectPersonalitiesDir, `${name}.json`)
+  
+  if (existsSync(projectPath)) {
+    const content = tryLoadJson<PersonalityFile>(projectPath)
+    if (content) {
+      const stats = statSync(projectPath)
+      return {
+        personality: content,
+        metadata: {
+          name,
+          description: content.description || "",
+          source: "project",
+          modifiedAt: stats.mtime.toISOString(),
+        },
+        path: projectPath,
+      }
+    }
+  }
+
+  // Fall back to global
+  const globalPersonalitiesDir = getPersonalitiesDir("global", projectDir, globalConfigDir)
+  const globalPath = join(globalPersonalitiesDir, `${name}.json`)
+  
+  if (existsSync(globalPath)) {
+    const content = tryLoadJson<PersonalityFile>(globalPath)
+    if (content) {
+      const stats = statSync(globalPath)
+      return {
+        personality: content,
+        metadata: {
+          name,
+          description: content.description || "",
+          source: "global",
+          modifiedAt: stats.mtime.toISOString(),
+        },
+        path: globalPath,
+      }
+    }
+  }
+
+  return null
+}
+
+/** Save a personality file */
+export function savePersonalityFile(
+  name: string,
+  config: PersonalityFile,
+  scope: ConfigScope,
+  projectDir: string,
+  globalConfigDir: string
+): void {
+  const personalitiesDir = getPersonalitiesDir(scope, projectDir, globalConfigDir)
+  const filePath = join(personalitiesDir, `${name}.json`)
+  
+  // Preserve existing state if file exists
+  const existing = tryLoadJson<PersonalityFile>(filePath)
+  const fileContent: PersonalityFile = existing?.state
+    ? { ...config, state: existing.state }
+    : config
+  
+  ensureDir(filePath)
+  writeFileSync(filePath, JSON.stringify(fileContent, null, 2))
+}
+
+/** Delete a personality file */
+export function deletePersonality(
+  name: string,
+  scope: ConfigScope,
+  projectDir: string,
+  globalConfigDir: string
+): void {
+  const personalitiesDir = getPersonalitiesDir(scope, projectDir, globalConfigDir)
+  const filePath = join(personalitiesDir, `${name}.json`)
+  
+  if (existsSync(filePath)) {
+    unlinkSync(filePath)
+  }
+}
+
+/** Migrate old single-file config to new multi-personality format */
+export function migrateOldPersonalityFormat(
+  scope: ConfigScope | string,
+  projectDir: string,
+  globalConfigDir: string
+): boolean {
+  const oldPath = scope === "global"
+    ? join(globalConfigDir, OLD_PERSONALITY_FILENAME)
+    : join(projectDir, ".opencode", OLD_PERSONALITY_FILENAME)
+  
+  if (!existsSync(oldPath)) {
+    return false
+  }
+  
+  const oldConfig = tryLoadJson<PersonalityFile>(oldPath)
+  if (!oldConfig) {
+    return false
+  }
+  
+  // Use personality name or default to "default"
+  const personalityName = oldConfig.name || "default"
+  
+  // Save to new location
+  savePersonalityFile(personalityName, oldConfig, scope as ConfigScope, projectDir, globalConfigDir)
+  
+  // Delete old file
+  unlinkSync(oldPath)
+  
+  return true
 }
 
 export function loadConfigWithPrecedence(projectDir: string): ConfigResult {

@@ -1,16 +1,23 @@
 import { tool } from "@opencode-ai/plugin"
-import type { PersonalityFile, MoodDefinition, PluginClient, ConfigResult } from "../types.js"
-import { writePersonalityFile, mergeWithDefaults, resolveScopePath } from "../config.js"
+import type { PersonalityFile, MoodDefinition, PluginClient } from "../types.js"
+import {
+  savePersonalityFile,
+  mergeWithDefaults,
+  resolveScopePath,
+  listPersonalities,
+} from "../config.js"
+import { loadPluginConfig, savePluginConfig } from "../plugin-config.js"
 
 export function createSavePersonalityTool(
-  configResult: ConfigResult,
+  projectDir: string,
+  globalConfigDir: string,
   client: PluginClient
 ) {
   return tool({
     description:
-      "Save a personality configuration. Use this after collecting personality details from the user.",
+      "Save a personality configuration with a name. Use this after collecting personality details from the user. Creates or updates a personality file in the personalities directory.",
     args: {
-      name: tool.schema.string().optional().describe("Name of the personality"),
+      name: tool.schema.string().describe("Name of the personality (required)"),
       description: tool.schema
         .string()
         .describe("Personality description (required) - describes how the assistant behaves"),
@@ -52,45 +59,77 @@ export function createSavePersonalityTool(
         .enum(["project", "global"])
         .optional()
         .describe("Where to save: project (.opencode/) or global (~/.config/opencode/)"),
+      select: tool.schema
+        .boolean()
+        .optional()
+        .describe("Select this personality as active after saving (default: true if first personality)"),
     },
     async execute(args) {
+      if (!args.name || args.name.trim().length === 0) {
+        return "Error: name is required. Please provide a personality name."
+      }
+
       if (!args.description || args.description.trim().length === 0) {
         return "Error: description is required. Please provide a personality description."
       }
 
+      const name = args.name.trim()
       const scope = args.scope ?? "project"
-      const scopePath = resolveScopePath(scope, configResult)
+      const scopePath = scope === "global" ? globalConfigDir : projectDir
 
-       const config: Partial<PersonalityFile> = {
-         name: args.name?.trim() ?? "",
-         description: args.description.trim(),
-         emoji: args.emoji ?? false,
-         slangIntensity: args.slangIntensity ?? 0,
-         mood: {
-           enabled: args.moodEnabled ?? false,
-           default: args.moodDefault ?? "happy",
-           override: null,
-           drift: args.moodDrift ?? 0.2,
-           toast: args.moodToast ?? true,
-         },
-       }
+      const config: Partial<PersonalityFile> = {
+        name,
+        description: args.description.trim(),
+        emoji: args.emoji ?? false,
+        slangIntensity: args.slangIntensity ?? 0,
+        mood: {
+          enabled: args.moodEnabled ?? false,
+          default: args.moodDefault ?? "happy",
+          override: null,
+          drift: args.moodDrift ?? 0.2,
+          toast: args.moodToast ?? true,
+        },
+      }
 
       if (args.moods && args.moods.length > 0) {
         config.moods = args.moods as MoodDefinition[]
       }
 
       const merged = mergeWithDefaults(config)
-      writePersonalityFile(scopePath, merged)
 
-      await client.tui.showToast({
-        body: {
-          title: "Personality Saved",
-          message: `Configuration saved to ${scope}`,
-          variant: "success",
-        },
-      })
+      // Save the personality file
+      savePersonalityFile(name, merged, scope, projectDir, globalConfigDir)
 
-      return `Personality saved to ${scope} (${scopePath})`
+      // Check if we should auto-select this personality
+      const available = listPersonalities(projectDir, globalConfigDir)
+      const pluginConfig = loadPluginConfig(projectDir, globalConfigDir)
+      const shouldSelect = args.select ?? (available.length === 1 && pluginConfig.selectedPersonality === null)
+
+      if (shouldSelect) {
+        savePluginConfig(
+          { selectedPersonality: name },
+          scope,
+          projectDir,
+          globalConfigDir
+        )
+        await client.tui.showToast({
+          body: {
+            title: "Personality Saved & Selected",
+            message: `"${name}" saved to ${scope} and activated`,
+            variant: "success",
+          },
+        })
+      } else {
+        await client.tui.showToast({
+          body: {
+            title: "Personality Saved",
+            message: `"${name}" saved to ${scope}`,
+            variant: "success",
+          },
+        })
+      }
+
+      return `Personality "${name}" saved to ${scope} (${scopePath}/personalities/${name}.json)`
     },
   })
 }

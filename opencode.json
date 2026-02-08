@@ -1,6 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["./src/index.ts"],
+  "plugin": [
+    "./src/index.ts",
+    "@plannotator/opencode@latest",
+    "@tarquinen/opencode-dcp@latest",
+    "opencode-goopspec",
+    "opencode-todo-reminder@latest"
+  ],
   "command": {
     "mood": {
       "description": "Set the assistant's mood [mood: bored, angry, lethargic] [duration: message, session, permanent]",

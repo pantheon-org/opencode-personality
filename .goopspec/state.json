@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "project": {
+    "name": "opencode-personality",
+    "initialized": "2026-02-07T06:23:13.058Z"
+  },
+  "workflow": {
+    "currentPhase": null,
+    "phase": "idle",
+    "mode": "standard",
+    "depth": "standard",
+    "researchOptIn": false,
+    "specLocked": false,
+    "acceptanceConfirmed": false,
+    "interviewComplete": false,
+    "interviewCompletedAt": null,
+    "currentWave": 0,
+    "totalWaves": 0,
+    "lastActivity": "2026-02-08T06:48:25.847Z",
+    "status": "idle"
+  },
+  "execution": {
+    "activeCheckpointId": null,
+    "completedPhases": [],
+    "pendingTasks": []
+  }
+}
