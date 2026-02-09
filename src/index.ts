@@ -150,22 +150,34 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
   const { directory: projectDir, client } = input;
   const globalConfigDir = join(process.env.HOME || process.env.USERPROFILE || '', '.config/opencode');
 
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Plugin initializing...' } });
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Project dir: ${projectDir}` } });
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Global config dir: ${globalConfigDir}` } });
+
   // Initialize directories and migrate old format
   initializePlugin(projectDir, globalConfigDir);
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Plugin initialized' } });
 
   // Detect whether plugin was loaded from project or global config
   const loadScope = await detectPluginLoadScope(projectDir, globalConfigDir);
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Load scope detected: ${loadScope}` } });
 
   // Install default personalities if none exist (to the detected scope)
-  if (!hasPersonalities(projectDir, globalConfigDir)) {
+  const hasPersons = hasPersonalities(projectDir, globalConfigDir);
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Has personalities: ${hasPersons}` } });
+  if (!hasPersons) {
+    await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Installing default personalities to ${loadScope}...` } });
     installDefaultPersonalities(loadScope, projectDir, globalConfigDir);
+    await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Default personalities installed' } });
   }
 
   // Get list of available personalities
   const available = listPersonalities(projectDir, globalConfigDir);
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Available personalities: ${available.map(p => p.name).join(', ')}` } });
 
   // Get currently selected personality
   const selectedName = getSelectedPersonality(projectDir, globalConfigDir, available);
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Selected personality: ${selectedName ?? 'none'}` } });
 
   // Load selected personality configuration
   const personalityLoadResult = selectedName ? loadPersonality(selectedName, projectDir, globalConfigDir) : null;
