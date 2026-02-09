@@ -41,17 +41,26 @@ The plugin uses a hook-based command system via `command.execute.before`:
 
 ### File Structure
 
+**The plugin automatically detects where it's configured and installs personalities to the matching scope:**
+
+- If configured in `~/.config/opencode/opencode.json` → installs to global scope
+- If configured in `.opencode/opencode.json` → installs to project scope
+
 ```bash
-~/.config/opencode/personality.json   (global active config)
-~/.config/opencode/personalities/     (global presets library)
+# Global Configuration
+~/.config/opencode/opencode.json          (plugin configured here)
+~/.config/opencode/opencode-personality.json   (global active config)
+~/.config/opencode/personalities/         (global presets library)
   yoda.json
   gandalf.json
   data.json
   sherlock.json
   ...
 
-.opencode/personality.json            (project active config)
-.opencode/personalities/              (project-local presets library)
+# Project Configuration  
+.opencode/opencode.json                   (plugin configured here)
+.opencode/opencode-personality.json            (project active config)
+.opencode/personalities/                  (project-local presets library)
   custom-personality.json
 ```
 

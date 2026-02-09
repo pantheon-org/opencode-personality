@@ -64,6 +64,46 @@ function isCommandOutput(value: unknown): value is CommandOutput {
   );
 }
 
+/**
+ * Detects whether the plugin was loaded from the project or global config.
+ * 
+ * Strategy: Check if the project-level opencode.json exists and contains
+ * a reference to this plugin. If so, assume project-level load.
+ * 
+ * @param projectDir - The project directory
+ * @param _globalConfigDir - The global config directory (unused but kept for API consistency)
+ * @returns 'project' if loaded from project config, 'global' otherwise
+ */
+export async function detectPluginLoadScope(projectDir: string, _globalConfigDir: string): Promise<'project' | 'global'> {
+  const projectConfigPath = join(projectDir, '.opencode', 'opencode.json');
+  
+  if (!existsSync(projectConfigPath)) {
+    return 'global';
+  }
+  
+  try {
+    const projectConfigContent = Bun.file(projectConfigPath);
+    const projectConfig = await projectConfigContent.json();
+    
+    // Check if plugin array exists and contains our plugin
+    const plugins = projectConfig.plugin || [];
+    if (!Array.isArray(plugins)) {
+      return 'global';
+    }
+    
+    // Check if any plugin entry references opencode-personality
+    const hasOurPlugin = plugins.some((p: unknown) => {
+      if (typeof p !== 'string') return false;
+      return p.includes('opencode-personality');
+    });
+    
+    return hasOurPlugin ? 'project' : 'global';
+  } catch {
+    // If we can't read or parse the config, assume global
+    return 'global';
+  }
+}
+
 // Initialize plugin directories and migration
 function initializePlugin(projectDir: string, globalConfigDir: string): void {
   // Ensure global config directory exists
@@ -113,9 +153,12 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
   // Initialize directories and migrate old format
   initializePlugin(projectDir, globalConfigDir);
 
-  // Install default personalities if none exist
+  // Detect whether plugin was loaded from project or global config
+  const loadScope = await detectPluginLoadScope(projectDir, globalConfigDir);
+
+  // Install default personalities if none exist (to the detected scope)
   if (!hasPersonalities(projectDir, globalConfigDir)) {
-    installDefaultPersonalities('global', projectDir, globalConfigDir);
+    installDefaultPersonalities(loadScope, projectDir, globalConfigDir);
   }
 
   // Get list of available personalities

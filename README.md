@@ -54,7 +54,7 @@ This plugin has undergone comprehensive code review and hardening:
 
 ## Installation
 
-Add to your `~/.config/opencode/opencode.json`:
+Add to your `~/.config/opencode/opencode.json` (global) or `.opencode/opencode.json` (project):
 
 ```json
 {
@@ -75,6 +75,10 @@ Add to your `~/.config/opencode/opencode.json`:
 > **Note:** Commands must be defined in your config file as OpenCode's plugin API doesn't yet support programmatic
 > registration.
 
+> **Important:** The plugin automatically detects where it's configured and installs personalities to the matching scope:
+> - If configured in `~/.config/opencode/opencode.json` → personalities install to `~/.config/opencode/personalities/`
+> - If configured in `.opencode/opencode.json` → personalities install to `.opencode/personalities/`
+
 ## Quick Start
 
 1. Run `opencode`
@@ -83,9 +87,14 @@ Add to your `~/.config/opencode/opencode.json`:
 
 ### Manual Setup
 
-Personality files are stored in the `personalities/` directory. Create a new personality by creating a JSON file:
+Personality files are stored in the `personalities/` directory. The plugin automatically creates this directory and installs default personalities when first loaded.
 
-**1. Create the personalities directory:**
+**Installation Location:**
+
+- If the plugin is configured in `~/.config/opencode/opencode.json` (global), personalities install to `~/.config/opencode/personalities/`
+- If the plugin is configured in `.opencode/opencode.json` (project), personalities install to `.opencode/personalities/`
+
+**1. Create the personalities directory (if needed):**
 
 ```bash
 mkdir -p ~/.config/opencode/personalities  # Global
