@@ -13,7 +13,9 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "personalities",
+    "schema"
   ],
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node --format esm --sourcemap=external && tsc --emitDeclarationOnly",
@@ -21,7 +23,10 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "generate-schema": "bun run bin/generate-schema.ts"
   },
   "keywords": [
     "opencode",
@@ -49,10 +54,14 @@
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
+    "bun-types": "^1.2.2",
     "eslint": "^9.0.0",
     "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "zod": "^4.1.8"
   }
 }
