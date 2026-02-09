@@ -4,5 +4,5 @@ dist
 .DS_Store
 .opencode/*
 .sisyphus/*
-.goopspec/*
+.goopspec
 TODO.md
