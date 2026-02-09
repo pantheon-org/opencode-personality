@@ -148,7 +148,7 @@ function getSelectedPersonality(
 
 const personalityPlugin: Plugin = async (input: PluginInput) => {
   const { directory: projectDir, client } = input;
-  const globalConfigDir = join(Bun.env.HOME || Bun.env.USERPROFILE || '', '.config/opencode');
+  const globalConfigDir = join(process.env.HOME || process.env.USERPROFILE || '', '.config/opencode');
 
   // Initialize directories and migrate old format
   initializePlugin(projectDir, globalConfigDir);

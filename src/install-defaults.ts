@@ -31,9 +31,7 @@ export function installDefaultPersonalities(scope: ConfigScope, projectDir: stri
     // Validate default personality before installing
     const validation = validatePersonalityFile(personality);
     if (!validation.valid) {
-      console.warn(`Warning: Default personality '${name}' failed validation:`);
-      console.warn(formatValidationErrors(validation));
-      console.warn(`Skipping installation of '${name}'`);
+      // Skip invalid personalities silently - validation errors are logged elsewhere if needed
       continue;
     }
 
