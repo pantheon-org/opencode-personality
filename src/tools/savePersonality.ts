@@ -17,7 +17,7 @@ export function createSavePersonalityTool(
       description: tool.schema
         .string()
         .describe('Personality description (required) - describes how the assistant behaves'),
-      emoji: tool.schema.boolean().optional().describe('Whether to use emojis in responses (default: false)'),
+      emoji: tool.schema.string().optional().describe('Emoji character for this personality (default: 🤖)'),
       slangIntensity: tool.schema
         .number()
         .optional()
@@ -61,7 +61,7 @@ export function createSavePersonalityTool(
       const config: Partial<PersonalityFile> = {
         name,
         description: args.description.trim(),
-        emoji: args.emoji ?? false,
+        emoji: args.emoji ?? '🤖',
         slangIntensity: args.slangIntensity ?? 0,
         mood: {
           enabled: args.moodEnabled ?? false,

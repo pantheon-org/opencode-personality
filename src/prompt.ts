@@ -16,7 +16,7 @@ export function buildPersonalityPrompt(config: PersonalityFile, mood: MoodName, 
 
   if (config.emoji) {
     lines.push(
-      `Use emojis naturally in your responses. Make sure they fit the personality and context. Don't overuse them and NEVER put emojis at the end of a line.`,
+      `Your personality emoji is ${config.emoji}. Use this emoji and other emojis naturally in your responses. Make sure they fit the personality and context. Don't overuse them and NEVER put emojis at the end of a line.`,
     );
   }
 

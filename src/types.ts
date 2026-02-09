@@ -113,8 +113,8 @@ export type PersonalityFile = {
   name?: string;
   /** Personality description injected into prompts */
   description: string;
-  /** Whether to use emojis in responses */
-  emoji: boolean;
+  /** Emoji character representing this personality */
+  emoji: string;
   /** Intensity of slang usage (0-1) */
   slangIntensity: number;
   /** Custom mood definitions (uses defaults if omitted) */

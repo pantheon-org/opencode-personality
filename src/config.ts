@@ -307,7 +307,7 @@ export function loadConfigWithPrecedence(projectDir: string): ConfigResult {
   let merged: PersonalityFile = {
     name: '',
     description: '',
-    emoji: false,
+    emoji: '🤖',
     slangIntensity: 0,
     moods: DEFAULT_MOODS,
     mood: { ...DEFAULT_MOOD_CONFIG },
@@ -337,7 +337,7 @@ export function mergeWithDefaults(partial: Partial<PersonalityFile>): Personalit
   let merged: PersonalityFile = {
     name: '',
     description: '',
-    emoji: false,
+    emoji: '🤖',
     slangIntensity: 0,
     moods: DEFAULT_MOODS,
     mood: { ...DEFAULT_MOOD_CONFIG },

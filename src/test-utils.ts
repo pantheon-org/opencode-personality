@@ -30,7 +30,7 @@ export function mockPersonalityFile(overrides?: Partial<PersonalityFile>): Perso
   return {
     name: overrides?.name ?? 'Test Personality',
     description: overrides?.description ?? 'A test personality for unit tests.',
-    emoji: overrides?.emoji ?? false,
+    emoji: overrides?.emoji ?? '🤖',
     slangIntensity: overrides?.slangIntensity ?? 0,
     moods: overrides?.moods ?? defaultMoods,
     mood: overrides?.mood ?? {

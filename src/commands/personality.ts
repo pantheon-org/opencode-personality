@@ -166,9 +166,8 @@ function applyFieldUpdate(config: PersonalityFile, field: string, value: string)
     case 'description':
       return { ...config, description: trimmed };
     case 'emoji': {
-      const parsed = parseBoolean(trimmed);
-      if (parsed === null) return config;
-      return { ...config, emoji: parsed };
+      if (!trimmed) return config;
+      return { ...config, emoji: trimmed };
     }
     case 'slangIntensity': {
       const parsed = parseNumber(trimmed);
@@ -362,7 +361,7 @@ export async function handlePersonalityCommand(
       const template: PersonalityFile = {
         name: presetName,
         description: `Personality preset: ${presetName}`,
-        emoji: false,
+        emoji: '🤖',
         slangIntensity: 0.5,
         mood: { enabled: false, default: 'happy', drift: 0.2, override: null, toast: true },
       };
@@ -389,7 +388,7 @@ export async function handlePersonalityCommand(
         const template: PersonalityFile = {
           name: asPreset,
           description: `Personality preset: ${asPreset}`,
-          emoji: false,
+          emoji: '🤖',
           slangIntensity: 0.5,
           mood: { enabled: false, default: 'happy', drift: 0.2, override: null, toast: true },
         };

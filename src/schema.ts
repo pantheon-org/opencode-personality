@@ -31,7 +31,7 @@ export const moodStateSchema = z.object({
 export const personalityFileSchema = z.object({
   name: z.string().optional(),
   description: z.string().min(1, 'Description is required'),
-  emoji: z.boolean(),
+  emoji: z.string().emoji('Must be a valid emoji character'),
   slangIntensity: z.number().min(0).max(1, 'Slang intensity must be between 0 and 1'),
   moods: z.array(moodDefinitionSchema).optional(),
   mood: moodConfigSchema,

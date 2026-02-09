@@ -55,7 +55,7 @@ describe('test-utils', () => {
       const personality = mockPersonalityFile();
       expect(personality.name).toBe('Test Personality');
       expect(personality.description).toBe('A test personality for unit tests.');
-      expect(personality.emoji).toBe(false);
+      expect(personality.emoji).toBe('🤖');
       expect(personality.slangIntensity).toBe(0);
       expect(personality.moods).toHaveLength(2);
       expect(personality.mood.enabled).toBe(true);
@@ -65,11 +65,11 @@ describe('test-utils', () => {
     it('should allow overrides', () => {
       const personality = mockPersonalityFile({
         name: 'Custom Name',
-        emoji: true,
+        emoji: '🎭',
         slangIntensity: 0.5,
       });
       expect(personality.name).toBe('Custom Name');
-      expect(personality.emoji).toBe(true);
+      expect(personality.emoji).toBe('🎭');
       expect(personality.slangIntensity).toBe(0.5);
       expect(personality.description).toBe('A test personality for unit tests.');
     });
