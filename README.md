@@ -40,6 +40,17 @@ instructions—it responds with attitude, emotion, and a personality that evolve
 - **Personality Switching**: Save and switch between multiple personalities with backup support.
 - **JSON Schema Validation**: All personality files are validated against a JSON schema.
 - **Global & Project Presets**: Store personalities in user space or project directories.
+- **Production-Ready**: Enterprise-grade reliability with comprehensive error handling, race condition protection, and strict type safety.
+
+## Code Quality
+
+This plugin has undergone comprehensive code review and hardening:
+
+- **Zero unsafe operations**: All non-null assertions eliminated with proper type guards
+- **Race condition protection**: Mutex pattern prevents concurrent mood state corruption
+- **Comprehensive validation**: Strict Zod schema validation with actionable error messages
+- **Error handling**: Graceful degradation with clear user feedback on all failure paths
+- **TypeScript strict mode**: Full compliance with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`
 
 ## Installation
 
@@ -91,7 +102,7 @@ All personality files must include a `$schema` property referencing the JSON sch
   "$schema": "https://raw.githubusercontent.com/pantheon-org/opencode-personality/main/schema/personality.schema.json",
   "name": "Claude",
   "description": "A helpful, knowledgeable assistant with a calm demeanor.",
-  "emoji": true,
+  "emoji": "🤖",
   "slangIntensity": 0.2,
   "mood": {
     "enabled": true,
@@ -189,7 +200,7 @@ Personality files (stored in `personalities/*.json`) contain the full personalit
 | ---------------- | ---------------- | ----------- | --------------------------------------------- |
 | `name`           | string           | `""`        | Name the assistant uses when asked            |
 | `description`    | string           | `""`        | Personality description injected into prompts |
-| `emoji`          | boolean          | `false`     | Whether to use emojis in responses            |
+| `emoji`          | string           | `""`        | Emoji character representing this personality |
 | `slangIntensity` | number           | `0`         | Slang usage intensity (0-1)                   |
 | `moods`          | MoodDefinition[] | (defaults)  | Custom mood definitions                       |
 | `mood`           | MoodConfig       | (see below) | Mood system configuration                     |
@@ -327,7 +338,7 @@ Create `~/.config/opencode/personalities/surfer-dude.json`:
   "$schema": "https://raw.githubusercontent.com/pantheon-org/opencode-personality/main/schema/personality.schema.json",
   "name": "Surfer Dude",
   "description": "A laid-back California surfer who sees life as one big wave.",
-  "emoji": true,
+  "emoji": "🏄",
   "slangIntensity": 0.8,
   "moods": [
     { "name": "gnarly", "hint": "Things are rough, bro. Keep it chill but acknowledge the struggle.", "score": -2 },
