@@ -20,9 +20,47 @@ import { createSavePersonalityTool } from './tools/savePersonality.js';
 import { handleMoodCommand } from './commands/mood.js';
 import { handlePersonalityCommand } from './commands/personality.js';
 
+// Mutex for mood state updates to prevent race conditions
+let moodStateLock: Promise<void> | null = null;
+
+async function withMoodStateLock<T>(fn: () => Promise<T>): Promise<T> {
+  // Wait for any existing lock to release
+  while (moodStateLock) {
+    await moodStateLock;
+  }
+
+  // Acquire lock
+  let releaseLock: () => void;
+  moodStateLock = new Promise((resolve) => {
+    releaseLock = resolve;
+  });
+
+  try {
+    return await fn();
+  } finally {
+    // Release lock
+    releaseLock!();
+    moodStateLock = null;
+  }
+}
+
 function isCommandOutput(value: unknown): value is CommandOutput {
-  return (
-    typeof value === 'object' && value !== null && 'parts' in value && Array.isArray((value as CommandOutput).parts)
+  if (typeof value !== 'object' || value === null || !('parts' in value)) {
+    return false;
+  }
+  const obj = value as { parts: unknown };
+  if (!Array.isArray(obj.parts)) {
+    return false;
+  }
+  // Validate that all parts have the correct shape
+  return obj.parts.every(
+    (part) =>
+      typeof part === 'object' &&
+      part !== null &&
+      'type' in part &&
+      'text' in part &&
+      typeof (part as { type: unknown }).type === 'string' &&
+      typeof (part as { text: unknown }).text === 'string'
   );
 }
 
@@ -166,11 +204,23 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
     },
 
     'experimental.chat.system.transform': async (_hookInput, output) => {
-      let state = loadMoodState(personalityLoadResult.path, config);
+      // Use mutex to prevent race conditions with event hook
+      const state = await withMoodStateLock(async () => {
+        let currentState = loadMoodState(personalityLoadResult.path, config);
 
-      if (config.mood.enabled) {
-        state = await driftMoodWithToast(personalityLoadResult.path, state, config, moods, config.mood.seed, client);
-      }
+        if (config.mood.enabled) {
+          currentState = await driftMoodWithToast(
+            personalityLoadResult.path,
+            currentState,
+            config,
+            moods,
+            config.mood.seed,
+            client,
+          );
+        }
+
+        return currentState;
+      });
 
       const prompt = buildPersonalityPrompt(config, state.current, moods);
       output.system.push(`<personality>\n${prompt}\n</personality>`);
@@ -180,8 +230,11 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
       if (event.type === 'message.updated' && config.mood.enabled) {
         const msg = event.properties as { info?: { sessionID?: string; role?: string } };
         if (msg.info?.sessionID && msg.info.role === 'assistant') {
-          const state = loadMoodState(personalityLoadResult.path, config);
-          await driftMoodWithToast(personalityLoadResult.path, state, config, moods, config.mood.seed, client);
+          // Use mutex to prevent race conditions with transform hook
+          await withMoodStateLock(async () => {
+            const state = loadMoodState(personalityLoadResult.path, config);
+            await driftMoodWithToast(personalityLoadResult.path, state, config, moods, config.mood.seed, client);
+          });
         }
       }
     },

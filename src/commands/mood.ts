@@ -31,7 +31,17 @@ export function handleMoodCommand(
   state.override = trimmed;
   state.current = trimmed;
   state.overrideExpiry = null;
-  saveMoodState(statePath, state);
+  
+  try {
+    saveMoodState(statePath, state);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    output.parts.push({
+      type: 'text',
+      text: `Error saving mood state: ${errorMessage}`,
+    });
+    return;
+  }
 
   output.parts.push({
     type: 'text',

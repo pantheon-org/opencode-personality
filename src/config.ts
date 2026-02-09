@@ -159,8 +159,7 @@ export function loadPersonality(
   name: string,
   projectDir: string,
   globalConfigDir: string,
-  validate: boolean = false,
-): (PersonalityLoadResult & { validation?: ValidationResult }) | null {
+): PersonalityLoadResult | null {
   // Try project first
   const projectPersonalitiesDir = getPersonalitiesDir('project', projectDir, globalConfigDir);
   const projectPath = join(projectPersonalitiesDir, `${name}.json`);
@@ -168,23 +167,31 @@ export function loadPersonality(
   if (existsSync(projectPath)) {
     const content = tryLoadJson<PersonalityFile>(projectPath);
     if (content) {
+      // Always validate to catch invalid configurations early
+      const validation = validatePersonalityFile(content);
+      
+      if (!validation.valid || !validation.data) {
+        const errorDetails = formatValidationErrors(validation);
+        throw new Error(
+          `Invalid personality file at ${projectPath}:\n${errorDetails}\n\n` +
+          `Please fix the validation errors above or run '/personality select' to choose a different personality.`
+        );
+      }
+      
+      // Type-safe: validation.data is guaranteed to exist here
+      const validatedData = validation.data as PersonalityFile;
+      
       const stats = statSync(projectPath);
-      const result: PersonalityLoadResult & { validation?: ValidationResult } = {
-        personality: content,
+      const result: PersonalityLoadResult = {
+        personality: validatedData,
         metadata: {
           name,
-          description: content.description || '',
+          description: validatedData.description || '',
           source: 'project',
           modifiedAt: stats.mtime.toISOString(),
         },
         path: projectPath,
       };
-
-      // Validate after loading
-      const validation = validatePersonalityFile(content);
-      if (validate || !validation.valid) {
-        result.validation = validation;
-      }
 
       return result;
     }
@@ -197,23 +204,31 @@ export function loadPersonality(
   if (existsSync(globalPath)) {
     const content = tryLoadJson<PersonalityFile>(globalPath);
     if (content) {
+      // Always validate to catch invalid configurations early
+      const validation = validatePersonalityFile(content);
+      
+      if (!validation.valid || !validation.data) {
+        const errorDetails = formatValidationErrors(validation);
+        throw new Error(
+          `Invalid personality file at ${globalPath}:\n${errorDetails}\n\n` +
+          `Please fix the validation errors above or run '/personality select' to choose a different personality.`
+        );
+      }
+      
+      // Type-safe: validation.data is guaranteed to exist here
+      const validatedData = validation.data as PersonalityFile;
+      
       const stats = statSync(globalPath);
-      const result: PersonalityLoadResult & { validation?: ValidationResult } = {
-        personality: content,
+      const result: PersonalityLoadResult = {
+        personality: validatedData,
         metadata: {
           name,
-          description: content.description || '',
+          description: validatedData.description || '',
           source: 'global',
           modifiedAt: stats.mtime.toISOString(),
         },
         path: globalPath,
       };
-
-      // Validate after loading
-      const validation = validatePersonalityFile(content);
-      if (validate || !validation.valid) {
-        result.validation = validation;
-      }
 
       return result;
     }
@@ -367,7 +382,10 @@ export function resolveDefaultMood(config: PersonalityFile, moods: MoodDefinitio
   const byName = moods.find((mood) => mood.name === config.mood.default);
   if (byName) return byName.name;
   if (moods.length === 0) return DEFAULT_MOOD_CONFIG.default;
-  return moods[0]!.name;
+  // Type-safe: we know moods has at least one element here
+  const firstMood = moods[0];
+  if (!firstMood) return DEFAULT_MOOD_CONFIG.default;
+  return firstMood.name;
 }
 
 export function resolveScope(flags: Record<string, string | boolean>, configResult: ConfigResult): ConfigScope {
