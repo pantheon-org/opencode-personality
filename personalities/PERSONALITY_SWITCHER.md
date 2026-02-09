@@ -10,6 +10,7 @@ We need to change the logic by which the personality is selected and loaded:
 4) **MUST** allow the selection of a personality from available ones - merging user space level and project level personalities
 5) **MUST** store the currently selected one - new plugin config at either the user space level `~/.config/opencode` or at project level `.opencode`
 6) **MUST** validate any and all `<personality>.json` through the use of a JsonSchema file - generate a new on that needs to be referenced in those personality files.
+7) **MUST** save the JSON schema under `./schema`
 
 ## Executive Summary
 
