@@ -31,7 +31,7 @@ export function handleMoodCommand(
   state.override = trimmed;
   state.current = trimmed;
   state.overrideExpiry = null;
-  
+
   try {
     saveMoodState(statePath, state);
   } catch (error) {

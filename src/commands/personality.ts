@@ -381,7 +381,9 @@ export async function handlePersonalityCommand(
       if (parsed.flags.activate === true) {
         output.parts.push({
           type: 'text',
-          text: buildCreatePrompt(nameArg, scope) + `\n\nNote: This will be saved as preset "${asPreset}" and activated automatically.`,
+          text:
+            buildCreatePrompt(nameArg, scope) +
+            `\n\nNote: This will be saved as preset "${asPreset}" and activated automatically.`,
         });
       } else {
         // Just save as preset without activating

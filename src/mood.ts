@@ -6,7 +6,7 @@ export function scoreToMood(score: number, moods: MoodDefinition[]): MoodName {
   if (!Number.isFinite(score)) {
     throw new Error(`Invalid mood score: ${score}. Score must be a finite number.`);
   }
-  
+
   if (moods.length === 0) return 'happy';
 
   const sorted = [...moods].sort((a, b) => a.score - b.score);
@@ -43,19 +43,19 @@ export function driftMood(
   if (!Number.isFinite(state.score)) {
     throw new Error(`Invalid state.score: ${state.score}. Score must be a finite number.`);
   }
-  
+
   if (!Number.isFinite(config.mood.drift) || config.mood.drift < 0 || config.mood.drift > 1) {
     throw new Error(`Invalid mood.drift: ${config.mood.drift}. Drift must be between 0 and 1.`);
   }
-  
+
   if (seed !== undefined && !Number.isFinite(seed)) {
     throw new Error(`Invalid seed: ${seed}. Seed must be a finite number.`);
   }
-  
+
   if (moods.length === 0) {
     throw new Error('Cannot drift mood: moods array is empty');
   }
-  
+
   if (state.override && (!state.overrideExpiry || Date.now() < state.overrideExpiry)) {
     return { ...state, current: state.override, lastUpdate: Date.now() };
   }
@@ -89,13 +89,12 @@ export async function driftMoodWithToast(
 ): Promise<MoodState> {
   const previousMood = state.current;
   const nextState = driftMood(state, config, moods, seed);
-  
+
   // Save drifted state with error handling
   try {
     saveMoodState(statePath, nextState);
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Failed to save mood state: ${errorMessage}`);
     // Don't throw - allow mood drift to continue even if save fails
   }

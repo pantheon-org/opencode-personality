@@ -12,7 +12,7 @@ import type {
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
-import { validatePersonalityFile, formatValidationErrors, type ValidationResult } from './schema.js';
+import { validatePersonalityFile, formatValidationErrors } from './schema.js';
 
 export const DEFAULT_MOOD_CONFIG: MoodConfig = {
   enabled: false,
@@ -169,18 +169,18 @@ export function loadPersonality(
     if (content) {
       // Always validate to catch invalid configurations early
       const validation = validatePersonalityFile(content);
-      
+
       if (!validation.valid || !validation.data) {
         const errorDetails = formatValidationErrors(validation);
         throw new Error(
           `Invalid personality file at ${projectPath}:\n${errorDetails}\n\n` +
-          `Please fix the validation errors above or run '/personality select' to choose a different personality.`
+            `Please fix the validation errors above or run '/personality select' to choose a different personality.`,
         );
       }
-      
+
       // Type-safe: validation.data is guaranteed to exist here
       const validatedData = validation.data as PersonalityFile;
-      
+
       const stats = statSync(projectPath);
       const result: PersonalityLoadResult = {
         personality: validatedData,
@@ -206,18 +206,18 @@ export function loadPersonality(
     if (content) {
       // Always validate to catch invalid configurations early
       const validation = validatePersonalityFile(content);
-      
+
       if (!validation.valid || !validation.data) {
         const errorDetails = formatValidationErrors(validation);
         throw new Error(
           `Invalid personality file at ${globalPath}:\n${errorDetails}\n\n` +
-          `Please fix the validation errors above or run '/personality select' to choose a different personality.`
+            `Please fix the validation errors above or run '/personality select' to choose a different personality.`,
         );
       }
-      
+
       // Type-safe: validation.data is guaranteed to exist here
       const validatedData = validation.data as PersonalityFile;
-      
+
       const stats = statSync(globalPath);
       const result: PersonalityLoadResult = {
         personality: validatedData,

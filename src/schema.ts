@@ -50,7 +50,7 @@ export interface ValidationResult {
 
 export function validatePersonalityFile(data: unknown): ValidationResult {
   const result = personalityFileSchema.safeParse(data);
-  
+
   if (result.success) {
     return {
       valid: true,
@@ -58,12 +58,12 @@ export function validatePersonalityFile(data: unknown): ValidationResult {
       data: result.data,
     };
   }
-  
+
   const errors = result.error.issues.map((issue) => {
     const path = issue.path.length > 0 ? issue.path.join('.') : 'root';
     return `${path}: ${issue.message}`;
   });
-  
+
   return {
     valid: false,
     errors,
@@ -74,6 +74,6 @@ export function formatValidationErrors(result: ValidationResult): string {
   if (result.valid) {
     return 'Validation passed';
   }
-  
+
   return result.errors.map((err) => `  - ${err}`).join('\n');
 }

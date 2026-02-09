@@ -60,7 +60,7 @@ function isCommandOutput(value: unknown): value is CommandOutput {
       'type' in part &&
       'text' in part &&
       typeof (part as { type: unknown }).type === 'string' &&
-      typeof (part as { text: unknown }).text === 'string'
+      typeof (part as { text: unknown }).text === 'string',
   );
 }
 
