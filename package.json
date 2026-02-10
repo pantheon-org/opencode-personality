@@ -26,7 +26,9 @@
     "prepublishOnly": "npm run clean && npm run build",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "generate-schema": "bun run bin/generate-schema.ts"
+    "generate-schema": "bun run bin/generate-schema.ts",
+    "dev": "node scripts/config-dev.js",
+    "prod": "node scripts/config-prod.js"
   },
   "keywords": [
     "opencode",
