@@ -114,12 +114,24 @@ function initializePlugin(projectDir: string, globalConfigDir: string): void {
   // Ensure personalities directories exist
   const globalPersonalitiesDir = getPersonalitiesDir('global', projectDir, globalConfigDir);
   if (!existsSync(globalPersonalitiesDir)) {
-    mkdirSync(globalPersonalitiesDir, { recursive: true });
+    try {
+      mkdirSync(globalPersonalitiesDir, { recursive: true });
+    } catch (error) {
+      throw new Error(
+        `Failed to create global personalities directory ${globalPersonalitiesDir}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   const projectPersonalitiesDir = getPersonalitiesDir('project', projectDir, globalConfigDir);
   if (!existsSync(projectPersonalitiesDir)) {
-    mkdirSync(projectPersonalitiesDir, { recursive: true });
+    try {
+      mkdirSync(projectPersonalitiesDir, { recursive: true });
+    } catch (error) {
+      throw new Error(
+        `Failed to create project personalities directory ${projectPersonalitiesDir}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   // Migrate old personality format if needed
@@ -167,8 +179,26 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Has personalities: ${hasPersons}` } });
   if (!hasPersons) {
     await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Installing default personalities to ${loadScope}...` } });
-    installDefaultPersonalities(loadScope, projectDir, globalConfigDir);
-    await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Default personalities installed' } });
+    const installResult = installDefaultPersonalities(loadScope, projectDir, globalConfigDir);
+    if (installResult.success) {
+      await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Default personalities installed: ${installResult.installed} personalities` } });
+      
+      // Verify installation by checking if personalities are now available
+      const verifyAvailable = listPersonalities(projectDir, globalConfigDir);
+      await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Verification: ${verifyAvailable.length} personalities available after installation` } });
+      if (verifyAvailable.length !== installResult.installed) {
+        await client.app.log({ body: { service: 'personality-plugin', level: 'warn', message: `Warning: Expected ${installResult.installed} but found ${verifyAvailable.length} personalities` } });
+      }
+    } else {
+      await client.app.log({ body: { service: 'personality-plugin', level: 'error', message: `Failed to install some personalities: ${installResult.errors.map(e => `${e.name}: ${e.error}`).join(', ')}` } });
+      if (installResult.installed > 0) {
+        await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Successfully installed: ${installResult.installed} personalities` } });
+        
+        // Verify partial installation
+        const verifyAvailable = listPersonalities(projectDir, globalConfigDir);
+        await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Verification: ${verifyAvailable.length} personalities available after partial installation` } });
+      }
+    }
   }
 
   // Get list of available personalities

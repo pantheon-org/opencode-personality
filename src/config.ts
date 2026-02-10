@@ -93,7 +93,13 @@ export function tryLoadJson<T>(filePath: string): T | null {
 export function ensureDir(filePath: string): void {
   const dir = dirname(filePath);
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch (error) {
+      throw new Error(
+        `Failed to create directory ${dir}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 }
 
@@ -455,8 +461,13 @@ function normalizeState(state: MoodState, defaultMood: MoodName, moods: MoodDefi
   const moodNames = new Set(moods.map((item) => item.name));
   const normalized: MoodState = { ...state };
 
+  // Validate defaultMood parameter - if invalid, use first mood or fallback
+  const validDefaultMood = moodNames.has(defaultMood) 
+    ? defaultMood 
+    : (moods[0]?.name ?? DEFAULT_MOOD_CONFIG.default);
+
   if (!moodNames.has(normalized.current)) {
-    normalized.current = defaultMood;
+    normalized.current = validDefaultMood;
   }
 
   if (normalized.override && !moodNames.has(normalized.override)) {

@@ -1,44 +1,57 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { ConfigScope } from './types.js';
 import { listPersonalities, savePersonalityFile } from './config.js';
-import { validatePersonalityFile, formatValidationErrors } from './schema.js';
+import { DEFAULT_PERSONALITIES } from './defaults/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const DEFAULTS_DIR = path.join(__dirname, '..', 'personalities');
-
+/**
+ * Check if any personalities exist (in either project or global scope).
+ */
 export function hasPersonalities(projectDir: string, globalConfigDir: string): boolean {
   const personalities = listPersonalities(projectDir, globalConfigDir);
   return personalities.length > 0;
 }
 
-export function installDefaultPersonalities(scope: ConfigScope, projectDir: string, globalConfigDir: string): void {
-  if (!fs.existsSync(DEFAULTS_DIR)) {
-    return;
-  }
+/**
+ * Install default personalities from TypeScript definitions.
+ * Only installs personalities that don't already exist.
+ * @returns Object with success status, count of installed personalities, and any errors
+ */
+export function installDefaultPersonalities(
+  scope: ConfigScope,
+  projectDir: string,
+  globalConfigDir: string,
+): { success: boolean; installed: number; errors: Array<{ name: string; error: string }> } {
+  const result = {
+    success: true,
+    installed: 0,
+    errors: [] as Array<{ name: string; error: string }>,
+  };
 
-  for (const file of fs.readdirSync(DEFAULTS_DIR)) {
-    if (!file.endsWith('.json')) continue;
-
-    const name = file.slice(0, -5); // Remove .json
-    const sourcePath = path.join(DEFAULTS_DIR, file);
-    const content = fs.readFileSync(sourcePath, 'utf-8');
-    const personality = JSON.parse(content);
-
-    // Validate default personality before installing
-    const validation = validatePersonalityFile(personality);
-    if (!validation.valid) {
-      // Skip invalid personalities silently - validation errors are logged elsewhere if needed
-      continue;
-    }
-
-    // Only install if personality with this name doesn't already exist
+  try {
     const existing = listPersonalities(projectDir, globalConfigDir);
-    if (!existing.find((p) => p.name === name)) {
-      savePersonalityFile(name, personality, scope, projectDir, globalConfigDir);
+    const existingNames = new Set(existing.map((p) => p.name));
+
+    for (const { filename, config } of DEFAULT_PERSONALITIES) {
+      // Only install if personality with this name doesn't already exist
+      if (!existingNames.has(filename)) {
+        try {
+          savePersonalityFile(filename, config, scope, projectDir, globalConfigDir);
+          result.installed++;
+        } catch (error) {
+          result.success = false;
+          result.errors.push({
+            name: filename,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
     }
+  } catch (error) {
+    result.success = false;
+    result.errors.push({
+      name: 'installation',
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
+
+  return result;
 }
