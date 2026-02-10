@@ -338,6 +338,24 @@ Override the current mood with optional duration.
 | `mood`     | string | Yes      | Name of the mood to set                              |
 | `duration` | string | No       | `"message"`, `"session"` (default), or `"permanent"` |
 
+### `savePersonality`
+
+Save a personality configuration with a name. Creates or updates a personality file in the personalities directory.
+
+| Parameter        | Type              | Required | Description                                                  |
+| ---------------- | ----------------- | -------- | ------------------------------------------------------------ |
+| `name`           | string            | Yes      | Name of the personality                                      |
+| `description`    | string            | Yes      | Personality description - describes how the assistant behaves |
+| `emoji`          | string            | No       | Emoji character for this personality (default: 🤖)           |
+| `slangIntensity` | number            | No       | Slang usage intensity 0-1 (default: 0)                       |
+| `moodEnabled`    | boolean           | No       | Enable mood drift system (default: false)                    |
+| `moodDefault`    | string            | No       | Default mood name (default: happy)                           |
+| `moodDrift`      | number            | No       | Mood drift amount 0-1 (default: 0.2)                         |
+| `moodToast`      | boolean           | No       | Show toast notifications on mood change (default: true)      |
+| `moods`          | MoodDefinition[]  | No       | Custom mood definitions (optional - defaults are provided)   |
+| `scope`          | "project"\|"global" | No    | Where to save: project or global (default: project)          |
+| `select`         | boolean           | No       | Select this personality as active after saving (default: true if first) |
+
 ## Custom Moods Example
 
 Create `~/.config/opencode/personalities/surfer-dude.json`:

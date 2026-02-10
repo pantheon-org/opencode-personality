@@ -35,8 +35,8 @@ src/
 │   ├── deadpool.ts       # Deadpool personality
 │   └── ...               # 9 more personalities
 ├── tools/
-│   ├── setMood.ts        # setMood tool definition
-│   └── savePersonality.ts # savePersonality tool definition
+│   ├── setMood.ts           # setMood tool definition
+│   └── savePersonality.ts   # savePersonality tool definition
 └── commands/
     ├── mood.ts           # /mood command handler
     └── personality.ts    # /personality command handler
@@ -53,7 +53,7 @@ src/
 | `src/mood.ts` | Mood drift algorithm - uses seeded random for testing |
 | `src/prompt.ts` | Builds personality section for system prompt |
 | `src/install-defaults.ts` | Installs default personalities on first run from TypeScript modules |
-| `src/defaults/` | TypeScript definitions for 12 built-in personalities |
+| `src/defaults/` | TypeScript definitions for 12 built-in personalities (rick, yoda, deadpool, data, sherlock, gandalf, glados, bender, q, dumbledore, splinter, spock) |
 | `src/index.ts` | Plugin hooks registration, main entry point |
 
 ## Plugin Hooks Used
@@ -152,4 +152,4 @@ const normalized = normalizeState(state, defaultMood, moods)
 - **Deterministic**: Use `mood.seed` for reproducible tests
 - **Minimal Dependencies**: Only `@opencode-ai/plugin` peer dependency and `zod` for validation
 - **Auto-install**: Installs default personalities if none exist on first run
-- **Logging**: Use opencode sdk logger: <https://opencode.ai/docs/plugins/#logging>
+- **Logging**: Use OpenCode SDK logger via `client.app.log()`: <https://opencode.ai/docs/plugins/#logging>
