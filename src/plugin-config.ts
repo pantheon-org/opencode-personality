@@ -6,6 +6,7 @@ import type { PluginConfig, ConfigScope } from './types.js';
 export const PLUGIN_CONFIG_FILENAME = 'opencode-personality.json';
 export const DEFAULT_PLUGIN_CONFIG: PluginConfig = {
   selectedPersonality: null,
+  randomPersonality: true,
 };
 
 export function getGlobalConfigDir(): string {
@@ -57,6 +58,40 @@ export function savePluginConfig(
   }
 
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
+/**
+ * Ensure plugin config file exists at the specified scope.
+ * Creates default config file if it doesn't exist.
+ * 
+ * @param scope - Target scope (global or project)
+ * @param directory - Project directory
+ * @param globalConfigDir - Global config directory
+ * @returns The plugin config (existing or newly created)
+ */
+export function ensurePluginConfig(
+  scope: ConfigScope,
+  directory: string,
+  globalConfigDir?: string,
+): PluginConfig {
+  const configPath = getPluginConfigPath(scope, directory, globalConfigDir);
+  
+  // Check if file already exists
+  if (fs.existsSync(configPath)) {
+    const existing = tryLoadJson<Partial<PluginConfig>>(configPath);
+    if (existing !== null) {
+      return { ...DEFAULT_PLUGIN_CONFIG, ...existing };
+    }
+  }
+  
+  // Create new config file
+  const configDir = path.dirname(configPath);
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true });
+  }
+  
+  fs.writeFileSync(configPath, JSON.stringify(DEFAULT_PLUGIN_CONFIG, null, 2));
+  return DEFAULT_PLUGIN_CONFIG;
 }
 
 function tryLoadJson<T>(filePath: string): T | null {

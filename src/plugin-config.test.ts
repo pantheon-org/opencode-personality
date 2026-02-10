@@ -71,6 +71,16 @@ describe('plugin-config', () => {
 
       const config = loadPluginConfig(projectDir, globalConfigDir);
       expect(config.selectedPersonality).toBeNull();
+      expect(config.randomPersonality).toBe(true); // Default value
+    });
+
+    it('should respect randomPersonality setting', () => {
+      const customConfig = { selectedPersonality: null, randomPersonality: false };
+      fs.mkdirSync(globalConfigDir, { recursive: true });
+      fs.writeFileSync(path.join(globalConfigDir, 'opencode-personality.json'), JSON.stringify(customConfig));
+
+      const config = loadPluginConfig(projectDir, globalConfigDir);
+      expect(config.randomPersonality).toBe(false);
     });
   });
 

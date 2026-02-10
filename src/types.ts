@@ -15,6 +15,8 @@ export type MoodName = string;
 export type PluginConfig = {
   /** Name of currently selected personality */
   selectedPersonality: string | null;
+  /** Whether to randomly select a personality on first load (defaults to true) */
+  randomPersonality?: boolean;
 };
 
 /**

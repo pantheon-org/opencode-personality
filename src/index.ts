@@ -9,7 +9,7 @@ import {
   migrateOldPersonalityFormat,
   getPersonalitiesDir,
 } from './config.js';
-import { loadPluginConfig, savePluginConfig } from './plugin-config.js';
+import { loadPluginConfig, savePluginConfig, ensurePluginConfig } from './plugin-config.js';
 import { hasPersonalities, installDefaultPersonalities } from './install-defaults.js';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -105,7 +105,11 @@ export async function detectPluginLoadScope(projectDir: string, _globalConfigDir
 }
 
 // Initialize plugin directories and migration
-function initializePlugin(projectDir: string, globalConfigDir: string): void {
+function initializePlugin(
+  projectDir: string,
+  globalConfigDir: string,
+  loadScope: 'global' | 'project'
+): void {
   // Ensure global config directory exists
   if (!existsSync(globalConfigDir)) {
     mkdirSync(globalConfigDir, { recursive: true });
@@ -134,6 +138,9 @@ function initializePlugin(projectDir: string, globalConfigDir: string): void {
     }
   }
 
+  // Ensure plugin config file exists at the detected scope
+  ensurePluginConfig(loadScope, projectDir, globalConfigDir);
+
   // Migrate old personality format if needed
   migrateOldPersonalityFormat('project', projectDir, globalConfigDir);
 }
@@ -146,12 +153,17 @@ function getSelectedPersonality(
 ): string | null {
   let pluginConfig = loadPluginConfig(projectDir, globalConfigDir);
 
-  // If no personality is selected and we have available ones, select the first one
+  // If no personality is selected and we have available ones, select one
   if (pluginConfig.selectedPersonality === null && available.length > 0) {
-    const first = available[0];
-    if (first) {
-      pluginConfig.selectedPersonality = first.name;
-      savePluginConfig(pluginConfig, first.source, projectDir, globalConfigDir);
+    // Use random selection if enabled (default: true)
+    const useRandom = pluginConfig.randomPersonality ?? true;
+    const selectedPersonality = useRandom
+      ? available[Math.floor(Math.random() * available.length)]
+      : available[0];
+    
+    if (selectedPersonality) {
+      pluginConfig.selectedPersonality = selectedPersonality.name;
+      savePluginConfig(pluginConfig, selectedPersonality.source, projectDir, globalConfigDir);
     }
   }
 
@@ -166,13 +178,13 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Project dir: ${projectDir}` } });
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Global config dir: ${globalConfigDir}` } });
 
-  // Initialize directories and migrate old format
-  initializePlugin(projectDir, globalConfigDir);
-  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Plugin initialized' } });
-
   // Detect whether plugin was loaded from project or global config
   const loadScope = await detectPluginLoadScope(projectDir, globalConfigDir);
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Load scope detected: ${loadScope}` } });
+
+  // Initialize directories and migrate old format
+  initializePlugin(projectDir, globalConfigDir, loadScope);
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Plugin initialized' } });
 
   // Install default personalities if none exist (to the detected scope)
   const hasPersons = hasPersonalities(projectDir, globalConfigDir);
