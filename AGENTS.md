@@ -28,7 +28,12 @@ src/
 ├── prompt.ts             # Personality prompt builder
 ├── install-defaults.ts   # Default personality installation logic
 ├── test-utils.ts         # Test helper functions
-├── defaults/             # Built-in personality templates
+├── defaults/             # Built-in personality templates (TypeScript)
+│   ├── index.ts          # Barrel export for all personalities
+│   ├── rick.ts           # Rick Sanchez personality
+│   ├── yoda.ts           # Yoda personality
+│   ├── deadpool.ts       # Deadpool personality
+│   └── ...               # 9 more personalities
 ├── tools/
 │   ├── setMood.ts        # setMood tool definition
 │   └── savePersonality.ts # savePersonality tool definition
@@ -47,7 +52,8 @@ src/
 | `src/schema.ts` | Zod schema validation for personality files |
 | `src/mood.ts` | Mood drift algorithm - uses seeded random for testing |
 | `src/prompt.ts` | Builds personality section for system prompt |
-| `src/install-defaults.ts` | Installs default personalities on first run |
+| `src/install-defaults.ts` | Installs default personalities on first run from TypeScript modules |
+| `src/defaults/` | TypeScript definitions for 12 built-in personalities |
 | `src/index.ts` | Plugin hooks registration, main entry point |
 
 ## Plugin Hooks Used
@@ -81,6 +87,15 @@ src/
 2. Import and wire up in `src/index.ts` `command.execute.before` hook
 3. Register in `opencode.json` command definitions
 4. Document in README
+
+### Adding a New Default Personality
+
+1. Create new TypeScript file in `src/defaults/` (e.g., `jarvis.ts`)
+2. Import `PersonalityFile` type from `../types.js`
+3. Export a const with personality configuration
+4. Add export to `src/defaults/index.ts` barrel
+5. Add to `DEFAULT_PERSONALITIES` array in `src/install-defaults.ts`
+6. Rebuild with `npm run build` to bundle
 
 ### Adding a New Tool
 
@@ -137,3 +152,4 @@ const normalized = normalizeState(state, defaultMood, moods)
 - **Deterministic**: Use `mood.seed` for reproducible tests
 - **Minimal Dependencies**: Only `@opencode-ai/plugin` peer dependency and `zod` for validation
 - **Auto-install**: Installs default personalities if none exist on first run
+- **Logging**: Use opencode sdk logger: <https://opencode.ai/docs/plugins/#logging>
