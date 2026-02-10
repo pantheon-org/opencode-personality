@@ -1,6 +1,18 @@
 import type { PersonalityFile, MoodDefinition, ConfigResult, CommandOutput } from '../types.js';
 import { loadMoodState, saveMoodState } from '../config.js';
 
+/**
+ * Generate markdown content for the /mood command
+ * @returns Markdown content with frontmatter
+ */
+export function getMoodCommandMarkdown(): string {
+  return `---
+description: Set the assistant's mood [mood: bored, angry, lethargic] [duration: message, session, permanent]
+---
+
+Call the setMood tool to set the mood to the mood and duration requested by the user. If the duration is not mentioned assume session.`;
+}
+
 export function handleMoodCommand(
   args: string,
   statePath: string,

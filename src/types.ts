@@ -172,3 +172,17 @@ export type PluginClient = PluginInput['client'];
 export type CommandOutput = {
   parts: Array<{ type: string; text: string }>;
 };
+
+/**
+ * Result of installing command files
+ */
+export type CommandInstallResult = {
+  /** Whether installation was successful */
+  success: boolean;
+  /** Number of commands installed */
+  installed: number;
+  /** Names of commands that were skipped (already exist) */
+  skipped: string[];
+  /** Errors that occurred during installation */
+  errors: Array<{ name: string; error: string }>;
+};

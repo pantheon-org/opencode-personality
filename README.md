@@ -54,30 +54,23 @@ This plugin has undergone comprehensive code review and hardening:
 
 ## Installation
 
-Add to your `~/.config/opencode/opencode.json` (global) or `.opencode/opencode.json` (project):
+Add to your `~/.config/opencode/opencode.json` (global) or `opencode.json` (project):
 
 ```json
 {
-  "plugin": ["opencode-personality"],
-  "command": {
-    "mood": {
-      "description": "Set the assistant's mood [mood: bored, angry, lethargic] [duration: message, session, permanent]",
-      "template": "Call the setMood tool to set the mood to the mood and duration requested by the user. If the duration is not mentioned assume session."
-    },
-    "personality": {
-      "description": "Manage personality config: create/edit/show/reset",
-      "template": "Call the appropriate personality management tool based on the user's request to create, edit, show, or reset the personality configuration."
-    }
-  }
+  "plugin": ["opencode-personality"]
 }
 ```
 
-> **Note:** Commands must be defined in your config file as OpenCode's plugin API doesn't yet support programmatic
-> registration.
+The plugin automatically registers the `/mood` and `/personality` commands when it loads. Command files are created in:
+- `~/.config/opencode/commands/` (if configured globally)
+- `.opencode/commands/` (if configured per-project)
 
-> **Important:** The plugin automatically detects where it's configured and installs personalities to the matching scope:
-> - If configured in `~/.config/opencode/opencode.json` → personalities install to `~/.config/opencode/personalities/`
-> - If configured in `.opencode/opencode.json` → personalities install to `.opencode/personalities/`
+You can customize these command files if desired.
+
+> **Important:** The plugin automatically detects where it's configured and installs to the matching scope:
+> - If configured in `~/.config/opencode/opencode.json` → personalities and commands install to `~/.config/opencode/`
+> - If configured in `opencode.json` (project) → personalities and commands install to `.opencode/`
 
 ## Quick Start
 
@@ -265,6 +258,8 @@ legacy configs to the new multi-personality structure when you use `/personality
 3. Original file is preserved as a backup
 
 ## Commands
+
+> **Note:** Commands are automatically registered when the plugin loads. No manual configuration required.
 
 ### `/mood [mood|status]`
 

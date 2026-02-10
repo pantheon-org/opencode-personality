@@ -17,6 +17,18 @@ import { loadPluginConfig, savePluginConfig } from '../plugin-config.js';
 import { validatePersonalityFile, formatValidationErrors } from '../schema.js';
 import { existsSync, readFileSync } from 'node:fs';
 
+/**
+ * Generate markdown content for the /personality command
+ * @returns Markdown content with frontmatter
+ */
+export function getPersonalityCommandMarkdown(): string {
+  return `---
+description: Manage personality config: create/edit/show/reset
+---
+
+Call the appropriate personality management tool based on the user's request to create, edit, show, or reset the personality configuration.`;
+}
+
 function normalizeToken(token: string): string {
   if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
     return token.slice(1, -1);

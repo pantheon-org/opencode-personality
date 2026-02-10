@@ -11,6 +11,7 @@ import {
 } from './config.js';
 import { loadPluginConfig, savePluginConfig, ensurePluginConfig } from './plugin-config.js';
 import { hasPersonalities, installDefaultPersonalities } from './install-defaults.js';
+import { installCommands } from './commands/install.js';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildPersonalityPrompt } from './prompt.js';
@@ -210,6 +211,21 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
         const verifyAvailable = listPersonalities(projectDir, globalConfigDir);
         await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Verification: ${verifyAvailable.length} personalities available after partial installation` } });
       }
+    }
+  }
+
+  // Install command files
+  await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Installing commands to ${loadScope}...` } });
+  const commandInstallResult = installCommands(loadScope, projectDir, globalConfigDir);
+  if (commandInstallResult.success) {
+    await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Commands installed: ${commandInstallResult.installed} commands` } });
+    if (commandInstallResult.skipped.length > 0) {
+      await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Commands skipped (already exist): ${commandInstallResult.skipped.join(', ')}` } });
+    }
+  } else {
+    await client.app.log({ body: { service: 'personality-plugin', level: 'warn', message: `Some commands failed to install: ${commandInstallResult.errors.map(e => `${e.name}: ${e.error}`).join(', ')}` } });
+    if (commandInstallResult.installed > 0) {
+      await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Successfully installed: ${commandInstallResult.installed} commands` } });
     }
   }
 
