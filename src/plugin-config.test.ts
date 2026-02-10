@@ -23,13 +23,13 @@ describe('plugin-config', () => {
   describe('getPluginConfigPath', () => {
     it('should return global path', () => {
       const globalPath = getPluginConfigPath('global', globalConfigDir, globalConfigDir);
-      expect(globalPath).toBe(path.join(globalConfigDir, 'opencode-personality.json'));
+      expect(globalPath).toBe(path.join(globalConfigDir, 'personality.json'));
     });
 
     it('should return project path', () => {
       const projectOpencodeDir = path.join(projectDir, '.opencode');
       const projectPath = getPluginConfigPath('project', projectDir);
-      expect(projectPath).toBe(path.join(projectOpencodeDir, 'opencode-personality.json'));
+      expect(projectPath).toBe(path.join(projectOpencodeDir, 'personality.json'));
     });
   });
 
@@ -41,7 +41,7 @@ describe('plugin-config', () => {
 
     it('should load from global when project config does not exist', () => {
       const globalConfig = { selectedPersonality: 'global-personality' };
-      const globalPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const globalPath = path.join(globalConfigDir, 'personality.json');
       fs.mkdirSync(globalConfigDir, { recursive: true });
       fs.writeFileSync(globalPath, JSON.stringify(globalConfig));
 
@@ -54,11 +54,11 @@ describe('plugin-config', () => {
       const projectConfig = { selectedPersonality: 'project-personality' };
 
       fs.mkdirSync(globalConfigDir, { recursive: true });
-      fs.writeFileSync(path.join(globalConfigDir, 'opencode-personality.json'), JSON.stringify(globalConfig));
+      fs.writeFileSync(path.join(globalConfigDir, 'personality.json'), JSON.stringify(globalConfig));
 
       const projectOpencodeDir = path.join(projectDir, '.opencode');
       fs.mkdirSync(projectOpencodeDir, { recursive: true });
-      fs.writeFileSync(path.join(projectOpencodeDir, 'opencode-personality.json'), JSON.stringify(projectConfig));
+      fs.writeFileSync(path.join(projectOpencodeDir, 'personality.json'), JSON.stringify(projectConfig));
 
       const config = loadPluginConfig(projectDir, globalConfigDir);
       expect(config.selectedPersonality).toBe('project-personality');
@@ -67,7 +67,7 @@ describe('plugin-config', () => {
     it('should merge partial config with defaults', () => {
       const partialConfig = {}; // Missing selectedPersonality
       fs.mkdirSync(globalConfigDir, { recursive: true });
-      fs.writeFileSync(path.join(globalConfigDir, 'opencode-personality.json'), JSON.stringify(partialConfig));
+      fs.writeFileSync(path.join(globalConfigDir, 'personality.json'), JSON.stringify(partialConfig));
 
       const config = loadPluginConfig(projectDir, globalConfigDir);
       expect(config.selectedPersonality).toBeNull();
@@ -77,7 +77,7 @@ describe('plugin-config', () => {
     it('should respect randomPersonality setting', () => {
       const customConfig = { selectedPersonality: null, randomPersonality: false };
       fs.mkdirSync(globalConfigDir, { recursive: true });
-      fs.writeFileSync(path.join(globalConfigDir, 'opencode-personality.json'), JSON.stringify(customConfig));
+      fs.writeFileSync(path.join(globalConfigDir, 'personality.json'), JSON.stringify(customConfig));
 
       const config = loadPluginConfig(projectDir, globalConfigDir);
       expect(config.randomPersonality).toBe(false);
@@ -89,7 +89,7 @@ describe('plugin-config', () => {
       const config = { selectedPersonality: 'test-personality' };
       savePluginConfig(config, 'global', projectDir, globalConfigDir);
 
-      const savedPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const savedPath = path.join(globalConfigDir, 'personality.json');
       expect(fs.existsSync(savedPath)).toBe(true);
 
       const saved = JSON.parse(fs.readFileSync(savedPath, 'utf-8'));
@@ -100,7 +100,7 @@ describe('plugin-config', () => {
       const config = { selectedPersonality: 'test-personality' };
       savePluginConfig(config, 'project', projectDir, globalConfigDir);
 
-      const savedPath = path.join(projectDir, '.opencode', 'opencode-personality.json');
+      const savedPath = path.join(projectDir, '.opencode', 'personality.json');
       expect(fs.existsSync(savedPath)).toBe(true);
 
       const saved = JSON.parse(fs.readFileSync(savedPath, 'utf-8'));
@@ -119,7 +119,7 @@ describe('plugin-config', () => {
 
   describe('ensurePluginConfig', () => {
     it('should create config file when it does not exist (global scope)', () => {
-      const configPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const configPath = path.join(globalConfigDir, 'personality.json');
       expect(fs.existsSync(configPath)).toBe(false);
 
       const config = ensurePluginConfig('global', projectDir, globalConfigDir);
@@ -132,7 +132,7 @@ describe('plugin-config', () => {
     });
 
     it('should create config file when it does not exist (project scope)', () => {
-      const configPath = path.join(projectDir, '.opencode', 'opencode-personality.json');
+      const configPath = path.join(projectDir, '.opencode', 'personality.json');
       expect(fs.existsSync(configPath)).toBe(false);
 
       const config = ensurePluginConfig('project', projectDir, globalConfigDir);
@@ -146,7 +146,7 @@ describe('plugin-config', () => {
 
     it('should return existing config when file exists', () => {
       const existingConfig = { selectedPersonality: 'existing-personality', randomPersonality: false };
-      const configPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const configPath = path.join(globalConfigDir, 'personality.json');
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
 
       const config = ensurePluginConfig('global', projectDir, globalConfigDir);
@@ -157,7 +157,7 @@ describe('plugin-config', () => {
 
     it('should merge partial existing config with defaults', () => {
       const partialConfig = { selectedPersonality: 'partial-personality' }; // Missing randomPersonality
-      const configPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const configPath = path.join(globalConfigDir, 'personality.json');
       fs.writeFileSync(configPath, JSON.stringify(partialConfig));
 
       const config = ensurePluginConfig('global', projectDir, globalConfigDir);
@@ -168,7 +168,7 @@ describe('plugin-config', () => {
 
     it('should not overwrite existing file', () => {
       const existingConfig = { selectedPersonality: 'do-not-overwrite', randomPersonality: false };
-      const configPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const configPath = path.join(globalConfigDir, 'personality.json');
       fs.writeFileSync(configPath, JSON.stringify(existingConfig));
 
       ensurePluginConfig('global', projectDir, globalConfigDir);
@@ -180,7 +180,7 @@ describe('plugin-config', () => {
 
     it('should create directory structure if missing', () => {
       const newProjectDir = path.join(tempDir, 'new-project');
-      const configPath = path.join(newProjectDir, '.opencode', 'opencode-personality.json');
+      const configPath = path.join(newProjectDir, '.opencode', 'personality.json');
       
       expect(fs.existsSync(configPath)).toBe(false);
 
@@ -191,7 +191,7 @@ describe('plugin-config', () => {
     });
 
     it('should handle corrupted JSON gracefully', () => {
-      const configPath = path.join(globalConfigDir, 'opencode-personality.json');
+      const configPath = path.join(globalConfigDir, 'personality.json');
       fs.writeFileSync(configPath, 'invalid json{');
 
       const config = ensurePluginConfig('global', projectDir, globalConfigDir);

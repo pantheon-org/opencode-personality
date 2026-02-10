@@ -1,5 +1,14 @@
 # Fix Config and Personality File Creation
 
+## AMENDMENTS (Latest Requirements)
+
+**Critical changes to original plan:**
+
+1. ✅ **Config filename**: MUST be `personality.json` (not `opencode-personality.json`)
+2. ✅ **Initial personality selection**: On first load, `selectedPersonality` MUST be set to a **randomly selected personality** (not null)
+3. ✅ **Enable property**: Add `enabled: true` to default config - plugin checks this and skips loading if `enabled: false`
+4. ✅ **Plugin load check**: If `enabled` property is `false`, the plugin should not load/initialize at all
+
 ## Problem Statement
 
 The plugin is not creating the required configuration files at startup:
@@ -8,6 +17,8 @@ The plugin is not creating the required configuration files at startup:
 2. **Personality data files** (JSON) are created correctly via `installDefaultPersonalities()`
 3. **Directory structure** is created correctly
 4. The plugin works once files exist, but fails on first run when files don't exist
+5. **NEW**: On initial load, a random personality must be selected and saved
+6. **NEW**: Plugin must respect the `enabled` flag and not load if disabled
 
 ### Expected Behavior
 
@@ -196,25 +207,28 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
 
 **Location**: Modify plugin function starting at line 161
 
-### Execution Flow After Fix
+### Execution Flow After Fix (AMENDED)
 
 ```
 1. Plugin loads
-2. Detect scope (global or project) via detectPluginLoadScope()
-3. initializePlugin(projectDir, globalConfigDir, loadScope):
+2. Load plugin config (personality.json)
+3. **NEW**: Check if enabled === false → EXIT EARLY (do not initialize)
+4. Detect scope (global or project) via detectPluginLoadScope()
+5. initializePlugin(projectDir, globalConfigDir, loadScope):
    a. Create ~/.config/opencode/ directory
    b. Create $CWD/.opencode/ directory
    c. Create ~/.config/opencode/personalities/ directory
    d. Create $CWD/.opencode/personalities/ directory
    e. Create personality.json at detected scope (NEW)
    f. Migrate old personality.json if exists
-4. Check if personalities exist
-5. If no personalities exist:
+6. Check if personalities exist
+7. If no personalities exist:
    a. Install defaults to detected scope
-   b. Auto-select first personality
-   c. Save selection to personality.json (already exists)
-6. Load selected personality
-7. Continue plugin initialization
+8. **NEW**: If selectedPersonality is null:
+   a. Randomly select a personality from available personalities
+   b. Save selection to personality.json
+9. Load selected personality
+10. Continue plugin initialization
 ```
 
 ## Implementation Checklist
@@ -368,14 +382,16 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
 
 ## Success Criteria
 
-1. ✅ Plugin creates `personality.json` on first run
+1. ✅ Plugin creates `personality.json` on first run (MUST be named `personality.json`)
 2. ✅ Config file created at correct scope (global or project)
 3. ✅ Default personalities installed to correct scope
-4. ✅ First personality auto-selected and saved
+4. ✅ **AMENDED**: Random personality auto-selected and saved on first run (not just first available)
 5. ✅ All existing tests pass
 6. ✅ Manual testing confirms files created correctly
 7. ✅ No duplicate files or personalities created
 8. ✅ Project config overrides global config
+9. ✅ **NEW**: Config includes `enabled: true` by default
+10. ✅ **NEW**: Plugin respects `enabled: false` and skips initialization completely
 
 ## Rollback Plan
 

@@ -35,7 +35,7 @@ describe('Plugin Initialization Integration', () => {
     expect(config.randomPersonality).toBe(true);
 
     // 2. Verify config file was created
-    const configPath = join(projectDir, '.opencode', 'opencode-personality.json');
+    const configPath = join(projectDir, '.opencode', 'personality.json');
     expect(existsSync(configPath)).toBe(true);
 
     // 3. Install default personalities
@@ -70,10 +70,6 @@ describe('Plugin Initialization Integration', () => {
     );
     expect(uniqueNames.size).toBe(12);
 
-    // 7. Verify loadConfigWithPrecedence works
-    const loadedConfig = loadConfigWithPrecedence(projectDir);
-    expect(loadedConfig.config).toBeNull(); // No personality selected yet
-    expect(loadedConfig.source).toBe('none');
   });
 
   it('should not duplicate personalities on second install', () => {
@@ -96,7 +92,7 @@ describe('Plugin Initialization Integration', () => {
     // Create config at project scope
     ensurePluginConfig('project', projectDir, globalDir);
 
-    const projectConfigPath = join(projectDir, '.opencode', 'opencode-personality.json');
+    const projectConfigPath = join(projectDir, '.opencode', 'personality.json');
     expect(existsSync(projectConfigPath)).toBe(true);
 
     // Install personalities at project scope
@@ -113,7 +109,7 @@ describe('Plugin Initialization Integration', () => {
     // Create config at global scope
     ensurePluginConfig('global', projectDir, globalDir);
 
-    const globalConfigPath = join(globalDir, 'opencode-personality.json');
+    const globalConfigPath = join(globalDir, 'personality.json');
     expect(existsSync(globalConfigPath)).toBe(true);
 
     // Install personalities at global scope

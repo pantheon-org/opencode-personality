@@ -3,10 +3,11 @@ import path from 'node:path';
 import os from 'node:os';
 import type { PluginConfig, ConfigScope } from './types.js';
 
-export const PLUGIN_CONFIG_FILENAME = 'opencode-personality.json';
+export const PLUGIN_CONFIG_FILENAME = 'personality.json';
 export const DEFAULT_PLUGIN_CONFIG: PluginConfig = {
   selectedPersonality: null,
   randomPersonality: true,
+  enabled: true,
 };
 
 export function getGlobalConfigDir(): string {

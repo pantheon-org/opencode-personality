@@ -17,6 +17,8 @@ export type PluginConfig = {
   selectedPersonality: string | null;
   /** Whether to randomly select a personality on first load (defaults to true) */
   randomPersonality?: boolean;
+  /** Whether the plugin is enabled (defaults to true). If false, plugin will not load */
+  enabled?: boolean;
 };
 
 /**
