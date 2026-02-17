@@ -104,12 +104,18 @@ export function ensureDir(filePath: string): void {
 }
 
 /** Get the personalities directory path for a given scope */
+/**
+ * @deprecated Use `getPersonalitiesDir` from infrastructure/directory.ts
+ */
 export function getPersonalitiesDir(scope: ConfigScope, projectDir: string, globalConfigDir: string): string {
   const baseDir = scope === 'global' ? globalConfigDir : join(projectDir, '.opencode');
   return join(baseDir, PERSONALITIES_DIR);
 }
 
 /** List all available personalities from both scopes */
+/**
+ * @deprecated Use `createPersonalityRepository(scope).findAll()` from personality/repository.ts
+ */
 export function listPersonalities(projectDir: string, globalConfigDir: string): PersonalityMetadata[] {
   const personalities: Map<string, PersonalityMetadata> = new Map();
 
@@ -161,6 +167,9 @@ export function listPersonalities(projectDir: string, globalConfigDir: string): 
 }
 
 /** Load a specific personality by name */
+/**
+ * @deprecated Use `createPersonalityRepository(scope).findByName(name)` from personality/repository.ts
+ */
 export function loadPersonality(
   name: string,
   projectDir: string,
@@ -280,6 +289,9 @@ export function deletePersonality(name: string, scope: ConfigScope, projectDir: 
 }
 
 /** Migrate old single-file config to new multi-personality format */
+/**
+ * @deprecated Use `migrateOldPersonalityFormat` from config/migration.ts
+ */
 export function migrateOldPersonalityFormat(
   scope: ConfigScope | string,
   projectDir: string,
@@ -354,6 +366,9 @@ export function loadConfigWithPrecedence(projectDir: string): ConfigResult {
   return { config: merged, source, statePath, globalPath, projectPath };
 }
 
+/**
+ * @deprecated Use `mergeWithDefaults` from config/loader.ts
+ */
 export function mergeWithDefaults(partial: Partial<PersonalityFile>): PersonalityFile {
   let merged: PersonalityFile = {
     name: '',
@@ -379,6 +394,9 @@ export function writePersonalityFile(path: string, nextConfig: PersonalityFile):
   writeFileSync(path, JSON.stringify(file, null, 2));
 }
 
+/**
+ * @deprecated Use `resolveMoods` from config/loader.ts
+ */
 export function resolveMoods(config: PersonalityFile): MoodDefinition[] {
   if (config.moods && config.moods.length > 0) return config.moods;
   return DEFAULT_MOODS;
@@ -413,6 +431,9 @@ export function formatConfigOutput(config: PersonalityFile): string {
   return JSON.stringify(config, null, 2);
 }
 
+/**
+ * @deprecated Use `createMoodStateRepository(statePath, config)` from mood/state.ts
+ */
 export function loadMoodState(statePath: string, config: PersonalityFile): MoodState {
   const file = tryLoadJson<PersonalityFile>(statePath);
   const moods = resolveMoods(config);
@@ -436,6 +457,9 @@ export function loadMoodState(statePath: string, config: PersonalityFile): MoodS
   );
 }
 
+/**
+ * @deprecated Use `createMoodStateRepository(statePath, config).save(state)` from mood/state.ts
+ */
 export function saveMoodState(statePath: string, state: MoodState): void {
   const dir = dirname(statePath);
   if (!existsSync(dir)) {
