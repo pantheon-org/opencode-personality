@@ -1,6 +1,6 @@
 import type { CommandInstallResult, ConfigScope } from '../types.js';
 import { getMoodCommandMarkdown } from './mood.js';
-import { getPersonalityCommandMarkdown } from './personality.js';
+import { getPersonalityCommandMarkdown } from './personality/index.js';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 

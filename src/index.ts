@@ -19,7 +19,7 @@ import { driftMoodWithToast } from './mood.js';
 import { createSetMoodTool } from './tools/setMood.js';
 import { createSavePersonalityTool } from './tools/savePersonality.js';
 import { handleMoodCommand } from './commands/mood.js';
-import { handlePersonalityCommand } from './commands/personality.js';
+import { handlePersonalityCommand } from './commands/personality/index.js';
 
 // Mutex for mood state updates to prevent race conditions
 let moodStateLock: Promise<void> | null = null;

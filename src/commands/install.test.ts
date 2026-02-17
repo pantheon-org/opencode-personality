@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createTempDir, cleanupTempDir, createMockGlobalConfigDir, createMockProjectDir } from '../test-utils.js';
 import { installCommands } from './install.js';
 import { getMoodCommandMarkdown } from './mood.js';
-import { getPersonalityCommandMarkdown } from './personality.js';
+import { getPersonalityCommandMarkdown } from './personality/index.js';
 
 describe('commands/install', () => {
   let tempDir: string;
