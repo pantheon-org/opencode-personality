@@ -6,3 +6,5 @@ dist
 .sisyphus/*
 .goopspec
 TODO.md
+.agents/
+.context/
