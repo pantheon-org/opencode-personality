@@ -1,0 +1,22 @@
+pre-commit:
+  parallel: true
+  commands:
+    # Fast quality checks on staged files only
+    format-check:
+      glob: "*.{ts,js,json,md,yml,yaml}"
+      run: |
+        # Check if files need formatting
+        if ! bun run format --check {staged_files}; then
+          echo "Formatting issues found. Auto-fixing..."
+          bun run format {staged_files}
+        fi
+      stage_fixed: true
+      
+    lint-check:
+      glob: "*.{ts,js}"
+      run: bun run lint {staged_files}
+      stage_fixed: true
+      
+    type-check:
+      # Type check entire project (incremental)
+      run: bun run typecheck

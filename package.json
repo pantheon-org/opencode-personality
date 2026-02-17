@@ -19,9 +19,12 @@
   ],
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node --format esm --sourcemap=external && tsc --emitDeclarationOnly",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
+    "lint": "bunx @biomejs/biome check .",
+    "lint:fix": "bunx @biomejs/biome check --write .",
+    "format": "bunx @biomejs/biome format --write .",
+    "typecheck": "bunx tsc --noEmit",
+    "hooks:install": "bunx lefthook install",
+    "hooks:uninstall": "bunx lefthook uninstall",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
     "test": "bun test",
@@ -53,11 +56,11 @@
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.1.48",
-    "@types/node": "^22.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "@types/bun": "^1.3.9",
+    "@types/node": "^25.2.3",
+    "biome": "^0.3.3",
     "bun-types": "^1.2.2",
-    "eslint": "^9.0.0",
+    "lefthook": "^2.1.1",
     "typescript": "^5.9.3"
   },
   "engines": {
