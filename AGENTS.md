@@ -8,16 +8,16 @@ An OpenCode plugin that adds configurable personality and mood systems to AI ass
 
 ## Code Style
 
-- **TypeScript**: Strict mode enabled with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`
-- **Formatting**: Use Prettier defaults (no config file needed)
-- **Imports**: Use `.js` extensions for local imports (ESM)
-- **Types**: Prefer explicit types for function parameters and return values
-- **Null handling**: Use `!` only when value is guaranteed; prefer guards
-- **Comments**: Avoid inline comments; use JSDoc for public APIs only
+## Code Style & Architecture
+
+This project follows strict organizational patterns. For detailed guidelines, see:
+
+- **Coding Standards**: `docs/CODING_STYLE.md` (comprehensive style guide)
+- **Biome Configuration**: `docs/BIOME_RATIONALE.md` (linting rules explanation)
 
 ## Architecture
 
-```
+```sh
 src/
 ├── index.ts              # Plugin entry point, hooks registration
 ├── types.ts              # All type definitions
