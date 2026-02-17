@@ -33,13 +33,15 @@ src/
 │   ├── rick.ts           # Rick Sanchez personality
 │   ├── yoda.ts           # Yoda personality
 │   ├── deadpool.ts       # Deadpool personality
-│   └── ...               # 9 more personalities
+│   ├── ...               # 9 more personalities
+│   └── *.json            # Legacy JSON files (retained for compatibility)
 ├── tools/
 │   ├── setMood.ts           # setMood tool definition
 │   └── savePersonality.ts   # savePersonality tool definition
 └── commands/
     ├── mood.ts           # /mood command handler
-    └── personality.ts    # /personality command handler
+    ├── personality.ts    # /personality command handler
+    └── install.ts        # /install command handler
 ```
 
 ## Key Files
@@ -62,7 +64,7 @@ src/
 |------|---------|
 | `experimental.chat.system.transform` | Inject personality into system prompt |
 | `event` | Drift mood after assistant responses |
-| `command.execute.before` | Handle `/mood` and `/personality` commands |
+| `command.execute.before` | Handle `/mood`, `/personality`, and `/install` commands |
 
 ## Testing Workflow
 

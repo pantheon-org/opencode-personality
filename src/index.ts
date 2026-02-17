@@ -76,33 +76,48 @@ function isCommandOutput(value: unknown): value is CommandOutput {
  * @returns 'project' if loaded from project config, 'global' otherwise
  */
 export async function detectPluginLoadScope(projectDir: string, _globalConfigDir: string): Promise<'project' | 'global'> {
-  const projectConfigPath = join(projectDir, '.opencode', 'opencode.json');
+  // First check .opencode/opencode.json (more specific, higher priority)
+  const dotOpencodeConfigPath = join(projectDir, '.opencode', 'opencode.json');
   
-  if (!existsSync(projectConfigPath)) {
-    return 'global';
-  }
-  
-  try {
-    const projectConfigContent = Bun.file(projectConfigPath);
-    const projectConfig = await projectConfigContent.json();
-    
-    // Check if plugin array exists and contains our plugin
-    const plugins = projectConfig.plugin || [];
-    if (!Array.isArray(plugins)) {
-      return 'global';
+  if (existsSync(dotOpencodeConfigPath)) {
+    try {
+      const config = await Bun.file(dotOpencodeConfigPath).json();
+      const plugins = config.plugin || [];
+      if (Array.isArray(plugins)) {
+        const hasOurPlugin = plugins.some((p: unknown) => {
+          if (typeof p !== 'string') return false;
+          return p.includes('opencode-personality');
+        });
+        if (hasOurPlugin) return 'project';
+      }
+    } catch {
+      // Continue to check root config
     }
-    
-    // Check if any plugin entry references opencode-personality
-    const hasOurPlugin = plugins.some((p: unknown) => {
-      if (typeof p !== 'string') return false;
-      return p.includes('opencode-personality');
-    });
-    
-    return hasOurPlugin ? 'project' : 'global';
-  } catch {
-    // If we can't read or parse the config, assume global
-    return 'global';
   }
+  
+  // Also check root opencode.json
+  const rootConfigPath = join(projectDir, 'opencode.json');
+  
+  if (existsSync(rootConfigPath)) {
+    try {
+      const config = await Bun.file(rootConfigPath).json();
+      const plugins = config.plugin || [];
+      if (Array.isArray(plugins)) {
+        const hasOurPlugin = plugins.some((p: unknown) => {
+          if (typeof p !== 'string') return false;
+          // Check for plugin reference by name or path
+          return p.includes('opencode-personality') || 
+                 p === './src/index.ts' || 
+                 p === './dist/index.js';
+        });
+        if (hasOurPlugin) return 'project';
+      }
+    } catch {
+      // Fall through to return global
+    }
+  }
+  
+  return 'global';
 }
 
 // Initialize plugin directories and migration
