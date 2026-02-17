@@ -156,8 +156,10 @@ export type ParsedCommand = {
   subcommand: string | null;
   /** Flag values (--flag value or --flag) */
   flags: Record<string, string | boolean>;
-  /** Key=value pairs */
+  /** Key=value pairs (legacy) */
   values: Record<string, string>;
+  /** Positional arguments */
+  positional: string[];
 };
 
 /** Duration for mood override */

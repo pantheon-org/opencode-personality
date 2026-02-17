@@ -1,3 +1,4 @@
+import { parseCommandArgs as _parseCommandArgs, tokenizeArgs } from '../parser.js';
 import type { PersonalityFile, PersonalityMetadata, ParsedCommand } from '../../types.js';
 import { resolveScope, mergeWithDefaults } from '../../config.js';
 import { parseBoolean, parseNumber } from '../../config.js';
@@ -9,58 +10,16 @@ function normalizeToken(token: string): string {
   return token;
 }
 
-function tokenizeArgs(raw: string): string[] {
-  const tokens = raw.match(/"[^"]*"|'[^']*'|\S+/g);
-  if (!tokens) return [];
-  return tokens.map((token) => normalizeToken(token));
-}
+export { tokenizeArgs, normalizeToken };
 
 export function parseCommandArgs(raw: string): ParsedCommand {
-  const tokens = tokenizeArgs(raw.trim());
-  const flags: Record<string, string | boolean> = {};
-  const values: Record<string, string> = {};
-  let subcommand: string | null = null;
-
-  let index = 0;
-  while (index < tokens.length) {
-    const token = tokens[index];
-    if (token === undefined) {
-      index += 1;
-      continue;
-    }
-
-    if (!subcommand && !token.startsWith('--') && !token.includes('=')) {
-      subcommand = token.toLowerCase();
-      index += 1;
-      continue;
-    }
-
-    if (token.startsWith('--')) {
-      const flagName = token.slice(2);
-      const next = tokens[index + 1];
-      if (next && !next.startsWith('--') && !next.includes('=')) {
-        flags[flagName] = next;
-        index += 2;
-      } else {
-        flags[flagName] = true;
-        index += 1;
-      }
-      continue;
-    }
-
-    if (token.includes('=')) {
-      const [key, ...rest] = token.split('=');
-      if (key !== undefined) {
-        values[key] = rest.join('=');
-      }
-      index += 1;
-      continue;
-    }
-
-    index += 1;
-  }
-
-  return { subcommand, flags, values };
+  const result = _parseCommandArgs(raw);
+  return {
+    subcommand: result.subcommand,
+    flags: result.flags,
+    values: {},
+    positional: result.positional,
+  };
 }
 
 export function buildPersonalityHelp(): string {
