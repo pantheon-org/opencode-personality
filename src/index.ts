@@ -194,6 +194,13 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Project dir: ${projectDir}` } });
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Global config dir: ${globalConfigDir}` } });
 
+  // Load plugin config to check if plugin is enabled
+  const initialPluginConfig = loadPluginConfig(projectDir, globalConfigDir);
+  if (initialPluginConfig.enabled === false) {
+    await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: 'Plugin disabled via config, skipping initialization' } });
+    return {}; // Return empty hooks - plugin is disabled
+  }
+
   // Detect whether plugin was loaded from project or global config
   const loadScope = await detectPluginLoadScope(projectDir, globalConfigDir);
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Load scope detected: ${loadScope}` } });
