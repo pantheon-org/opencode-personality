@@ -31,16 +31,15 @@ export function installDefaultPersonalities(
     const existingNames = new Set(existing.map((p) => p.name));
 
     for (const { filename, config } of DEFAULT_PERSONALITIES) {
-      // Only install if personality with this name doesn't already exist
       if (!existingNames.has(filename)) {
-        try {
-          savePersonalityFile(filename, config, scope, projectDir, globalConfigDir);
+        const saveResult = savePersonalityFile(filename, config, scope, projectDir, globalConfigDir);
+        if (saveResult.success) {
           result.installed++;
-        } catch (error) {
+        } else {
           result.success = false;
           result.errors.push({
             name: filename,
-            error: error instanceof Error ? error.message : String(error),
+            error: saveResult.error.message,
           });
         }
       }

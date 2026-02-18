@@ -112,9 +112,13 @@ describe('config - multi-personality', () => {
   });
 
   describe('loadPersonality', () => {
-    it('should return null when personality does not exist', () => {
+    it('should return failure when personality does not exist', () => {
       const result = loadPersonality('non-existent', projectDir, globalConfigDir);
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      if (!result || result.success) {
+        throw new Error('Expected failure result');
+      }
+      expect(result.error.code).toBe('PERSONALITY_NOT_FOUND');
     });
 
     it('should load global personality', () => {
@@ -123,8 +127,11 @@ describe('config - multi-personality', () => {
 
       const result = loadPersonality('global-test', projectDir, globalConfigDir);
       expect(result).not.toBeNull();
-      expect(result!.personality.name).toBe('global-test');
-      expect(result!.metadata.source).toBe('global');
+      if (!result || !result.success) {
+        throw new Error('Expected successful result');
+      }
+      expect(result.data.personality.name).toBe('global-test');
+      expect(result.data.metadata.source).toBe('global');
     });
 
     it('should prefer project personality over global', () => {
@@ -135,8 +142,11 @@ describe('config - multi-personality', () => {
       fs.writeFileSync(path.join(projectPersonalitiesDir, 'test.json'), JSON.stringify(projectPersonality));
 
       const result = loadPersonality('test', projectDir, globalConfigDir);
-      expect(result!.personality.description).toBe('project');
-      expect(result!.metadata.source).toBe('project');
+      if (!result || !result.success) {
+        throw new Error('Expected successful result');
+      }
+      expect(result.data.personality.description).toBe('project');
+      expect(result.data.metadata.source).toBe('project');
     });
   });
 

@@ -1,14 +1,6 @@
-import type {
-  PersonalityFile,
-  ConfigResult,
-  ConfigScope,
-  MoodConfig,
-  MoodDefinition,
-  MoodState,
-  MoodName,
-  PersonalityMetadata,
-  PersonalityLoadResult,
-} from './types.js';
+import type { PersonalityFile, ConfigResult, ConfigScope, MoodConfig, MoodDefinition, MoodState, MoodName, PersonalityMetadata, PersonalityLoadResult } from './types.js';
+import type { ResultOrFailure, AppResult } from './errors/index.js';
+import { success, failure, createError, errors } from './errors/index.js';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
@@ -167,14 +159,11 @@ export function listPersonalities(projectDir: string, globalConfigDir: string): 
 }
 
 /** Load a specific personality by name */
-/**
- * @deprecated Use `createPersonalityRepository(scope).findByName(name)` from personality/repository.ts
- */
 export function loadPersonality(
   name: string,
   projectDir: string,
   globalConfigDir: string,
-): PersonalityLoadResult | null {
+): ResultOrFailure<PersonalityLoadResult> {
   // Try project first
   const projectPersonalitiesDir = getPersonalitiesDir('project', projectDir, globalConfigDir);
   const projectPath = join(projectPersonalitiesDir, `${name}.json`);
@@ -182,20 +171,17 @@ export function loadPersonality(
   if (existsSync(projectPath)) {
     const content = tryLoadJson<PersonalityFile>(projectPath);
     if (content) {
-      // Always validate to catch invalid configurations early
       const validation = validatePersonalityFile(content);
 
       if (!validation.valid || !validation.data) {
         const errorDetails = formatValidationErrors(validation);
-        throw new Error(
-          `Invalid personality file at ${projectPath}:\n${errorDetails}\n\n` +
-            `Please fix the validation errors above or run '/personality select' to choose a different personality.`,
-        );
+        return failure(errors.personalityLoadError(
+          name,
+          `Invalid personality file at ${projectPath}: ${errorDetails}`,
+        ));
       }
 
-      // Type-safe: validation.data is guaranteed to exist here
       const validatedData = validation.data as PersonalityFile;
-
       const stats = statSync(projectPath);
       const result: PersonalityLoadResult = {
         personality: validatedData,
@@ -208,7 +194,7 @@ export function loadPersonality(
         path: projectPath,
       };
 
-      return result;
+      return success(result);
     }
   }
 
@@ -219,20 +205,17 @@ export function loadPersonality(
   if (existsSync(globalPath)) {
     const content = tryLoadJson<PersonalityFile>(globalPath);
     if (content) {
-      // Always validate to catch invalid configurations early
       const validation = validatePersonalityFile(content);
 
       if (!validation.valid || !validation.data) {
         const errorDetails = formatValidationErrors(validation);
-        throw new Error(
-          `Invalid personality file at ${globalPath}:\n${errorDetails}\n\n` +
-            `Please fix the validation errors above or run '/personality select' to choose a different personality.`,
-        );
+        return failure(errors.personalityLoadError(
+          name,
+          `Invalid personality file at ${globalPath}: ${errorDetails}`,
+        ));
       }
 
-      // Type-safe: validation.data is guaranteed to exist here
       const validatedData = validation.data as PersonalityFile;
-
       const stats = statSync(globalPath);
       const result: PersonalityLoadResult = {
         personality: validatedData,
@@ -245,11 +228,11 @@ export function loadPersonality(
         path: globalPath,
       };
 
-      return result;
+      return success(result);
     }
   }
 
-  return null;
+  return failure(errors.personalityNotFound(name));
 }
 
 /** Save a personality file */
@@ -259,23 +242,26 @@ export function savePersonalityFile(
   scope: ConfigScope,
   projectDir: string,
   globalConfigDir: string,
-): void {
+): ResultOrFailure<void> {
   const personalitiesDir = getPersonalitiesDir(scope, projectDir, globalConfigDir);
   const filePath = join(personalitiesDir, `${name}.json`);
 
-  // Preserve existing state if file exists
-  const existing = tryLoadJson<PersonalityFile>(filePath);
-  const fileContent: PersonalityFile = existing?.state ? { ...config, state: existing.state } : config;
+  try {
+    const existing = tryLoadJson<PersonalityFile>(filePath);
+    const fileContent: PersonalityFile = existing?.state ? { ...config, state: existing.state } : config;
 
-  // Validate before saving
-  const validation = validatePersonalityFile(fileContent);
-  if (!validation.valid) {
-    const errorMessage = formatValidationErrors(validation);
-    throw new Error(`Validation failed for personality "${name}":\n${errorMessage}`);
+    const validation = validatePersonalityFile(fileContent);
+    if (!validation.valid) {
+      const errorMessage = formatValidationErrors(validation);
+      return failure(errors.personalityInvalid(name, errorMessage));
+    }
+
+    ensureDir(filePath);
+    writeFileSync(filePath, JSON.stringify(fileContent, null, 2));
+    return success(undefined);
+  } catch (error) {
+    return failure(errors.fileSystemError('save personality', filePath, error));
   }
-
-  ensureDir(filePath);
-  writeFileSync(filePath, JSON.stringify(fileContent, null, 2));
 }
 
 /** Delete a personality file */
@@ -311,13 +297,13 @@ export function migrateOldPersonalityFormat(
     return false;
   }
 
-  // Use personality name or default to "default"
   const personalityName = oldConfig.name || 'default';
 
-  // Save to new location
-  savePersonalityFile(personalityName, oldConfig, scope as ConfigScope, projectDir, globalConfigDir);
+  const saveResult = savePersonalityFile(personalityName, oldConfig, scope as ConfigScope, projectDir, globalConfigDir);
+  if (!saveResult.success) {
+    return false;
+  }
 
-  // Delete old file
   unlinkSync(oldPath);
 
   return true;
@@ -434,46 +420,54 @@ export function formatConfigOutput(config: PersonalityFile): string {
 /**
  * @deprecated Use `createMoodStateRepository(statePath, config)` from mood/state.ts
  */
-export function loadMoodState(statePath: string, config: PersonalityFile): MoodState {
-  const file = tryLoadJson<PersonalityFile>(statePath);
-  const moods = resolveMoods(config);
-  const defaultMood = resolveDefaultMood(config, moods);
+export function loadMoodState(statePath: string, config: PersonalityFile): ResultOrFailure<MoodState> {
+  try {
+    const file = tryLoadJson<PersonalityFile>(statePath);
+    const moods = resolveMoods(config);
+    const defaultMood = resolveDefaultMood(config, moods);
 
-  if (file?.state) {
-    const normalized = normalizeState(file.state, defaultMood, moods);
-    return normalized;
+    if (file?.state) {
+      const normalized = normalizeState(file.state, defaultMood, moods);
+      return success(normalized);
+    }
+
+    return success(normalizeState(
+      {
+        current: defaultMood,
+        score: resolveMoodScore(defaultMood, moods),
+        lastUpdate: Date.now(),
+        override: config.mood.override,
+        overrideExpiry: null,
+      },
+      defaultMood,
+      moods,
+    ));
+  } catch (error) {
+    return failure(createError('MOOD_STATE_CORRUPTED', error instanceof Error ? error.message : String(error)));
   }
-
-  return normalizeState(
-    {
-      current: defaultMood,
-      score: resolveMoodScore(defaultMood, moods),
-      lastUpdate: Date.now(),
-      override: config.mood.override,
-      overrideExpiry: null,
-    },
-    defaultMood,
-    moods,
-  );
 }
 
 /**
  * @deprecated Use `createMoodStateRepository(statePath, config).save(state)` from mood/state.ts
  */
-export function saveMoodState(statePath: string, state: MoodState): void {
-  const dir = dirname(statePath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
+export function saveMoodState(statePath: string, state: MoodState): ResultOrFailure<void> {
+  try {
+    const dir = dirname(statePath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
 
-  const existing = tryLoadJson<PersonalityFile>(statePath);
-  if (!existing) {
-    // File doesn't exist yet (first run or reset) - nothing to save to
-    return;
-  }
-  const file: PersonalityFile = { ...existing, state };
+    const existing = tryLoadJson<PersonalityFile>(statePath);
+    if (!existing) {
+      return success(undefined);
+    }
+    const file: PersonalityFile = { ...existing, state };
 
-  writeFileSync(statePath, JSON.stringify(file, null, 2));
+    writeFileSync(statePath, JSON.stringify(file, null, 2));
+    return success(undefined);
+  } catch (error) {
+    return failure(createError('FILE_SYSTEM_ERROR', error instanceof Error ? error.message : String(error)));
+  }
 }
 
 export function resolveMoodScore(mood: MoodName, moods: MoodDefinition[]): number {
@@ -533,11 +527,12 @@ export function backupPersonality(
   projectDir: string,
   globalConfigDir: string,
 ): string | null {
-  const personality = loadPersonality(name, projectDir, globalConfigDir);
-  if (!personality) {
+  const result = loadPersonality(name, projectDir, globalConfigDir);
+  if (!result.success) {
     return null;
   }
 
+  const personality = result.data;
   const backupsDir = getBackupsDir(scope, projectDir, globalConfigDir);
   const timestamp = Date.now();
   const backupName = `${name}-backup-${timestamp}`;
@@ -614,12 +609,13 @@ export function restorePersonality(
     return { success: false, error: `Failed to read backup file "${backupName}"` };
   }
 
-  // Extract original personality name from backup name (format: <name>-backup-<timestamp>)
   const match = backupName.match(/^(.+)-backup-\d+$/);
   const personalityName = (match && match[1]) || backupName;
 
-  // Save to personalities directory
-  savePersonalityFile(personalityName, content, scope, projectDir, globalConfigDir);
+  const saveResult = savePersonalityFile(personalityName, content, scope, projectDir, globalConfigDir);
+  if (!saveResult.success) {
+    return { success: false, error: saveResult.error.message };
+  }
 
   return { success: true, name: personalityName };
 }

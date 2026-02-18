@@ -5,6 +5,7 @@ import { resolveScope } from '../../config.js';
 import { existsSync, readFileSync } from 'node:fs';
 import type { PersonalityCommandContext } from './types.js';
 import { parseCommandArgs, buildSelectionPrompt } from './utils.js';
+import { isFailure } from '../../errors/index.js';
 
 export async function handleUse(ctx: PersonalityCommandContext): Promise<void> {
   const { args, configResult, output, projectDir, globalConfigDir } = ctx;
@@ -53,7 +54,14 @@ export async function handleUse(ctx: PersonalityCommandContext): Promise<void> {
         }
       }
 
-      savePersonalityFile(importName, fileContent, scope, projectDir, globalConfigDir);
+      const saveResult = savePersonalityFile(importName, fileContent, scope, projectDir, globalConfigDir);
+      if (!saveResult.success) {
+        output.parts.push({
+          type: 'text',
+          text: `Failed to save personality: ${saveResult.error.message}`,
+        });
+        return;
+      }
       savePluginConfig({ selectedPersonality: importName }, scope, projectDir, globalConfigDir);
 
       output.parts.push({
@@ -77,14 +85,16 @@ export async function handleUse(ctx: PersonalityCommandContext): Promise<void> {
     return;
   }
 
-  const personality = loadPersonality(nameArg, projectDir, globalConfigDir);
-  if (!personality) {
+  const result = loadPersonality(nameArg, projectDir, globalConfigDir);
+  if (isFailure(result)) {
     output.parts.push({
       type: 'text',
       text: `Personality "${nameArg}" not found.\n\n${buildSelectionPrompt(available, pluginConfig.selectedPersonality)}`,
     });
     return;
   }
+
+  const personality = result.data;
 
   if (parsed.flags.backup === true && pluginConfig.selectedPersonality) {
     const backupName = backupPersonality(pluginConfig.selectedPersonality, scope, projectDir, globalConfigDir);

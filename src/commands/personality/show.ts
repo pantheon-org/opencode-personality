@@ -3,6 +3,7 @@ import { loadPluginConfig } from '../../plugin-config.js';
 import { validatePersonalityFile, formatValidationErrors } from '../../schema.js';
 import type { PersonalityCommandContext } from './types.js';
 import { parseCommandArgs, buildSelectionPrompt } from './utils.js';
+import { isFailure } from '../../errors/index.js';
 
 export async function handleShow(ctx: PersonalityCommandContext): Promise<void> {
   const { args, output, projectDir, globalConfigDir } = ctx;
@@ -22,8 +23,8 @@ export async function handleShow(ctx: PersonalityCommandContext): Promise<void> 
     return;
   }
 
-  const personality = loadPersonality(showName, projectDir, globalConfigDir);
-  if (!personality) {
+  const result = loadPersonality(showName, projectDir, globalConfigDir);
+  if (isFailure(result)) {
     output.parts.push({
       type: 'text',
       text: `Personality "${showName}" not found. It may have been deleted.\n\n${buildSelectionPrompt([], null)}`,
@@ -31,6 +32,7 @@ export async function handleShow(ctx: PersonalityCommandContext): Promise<void> 
     return;
   }
 
+  const personality = result.data;
   const validate = parsed.flags.validate === true;
   const lines: string[] = [`Personality: ${showName} (${personality.metadata.source})`];
 

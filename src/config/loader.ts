@@ -3,6 +3,9 @@ import { DEFAULT_MOOD_CONFIG, DEFAULT_MOODS } from './defaults.js';
 import { getConfigPaths, getPersonalitiesDir } from '../infrastructure/directory.js';
 import type { FileSystem } from '../infrastructure/file-system.js';
 import { tryLoadJson, defaultFileSystem } from '../infrastructure/file-system.js';
+import type { ResultOrFailure } from '../errors/types.js';
+import { success, failure } from '../errors/result.js';
+import { errors } from '../errors/factory.js';
 
 export interface ConfigLoader {
   load(projectDir: string): Promise<ConfigResult>;
@@ -85,6 +88,21 @@ export class FileSystemConfigLoader implements ConfigLoader {
 export async function loadConfigWithPrecedence(projectDir: string): Promise<ConfigResult> {
   const loader = new FileSystemConfigLoader();
   return loader.load(projectDir);
+}
+
+export async function loadConfig(
+  projectDir: string,
+): Promise<ResultOrFailure<ConfigResult>> {
+  if (!projectDir) {
+    return failure(errors.validationError('Project directory is required', 'projectDir'));
+  }
+
+  try {
+    const result = await loadConfigWithPrecedence(projectDir);
+    return success(result);
+  } catch (error) {
+    return failure(errors.fileSystemError('load config', projectDir, error));
+  }
 }
 
 export function mergeWithDefaults(partial: Partial<PersonalityFile>): PersonalityFile {

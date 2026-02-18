@@ -3,3 +3,7 @@ export * from './defaults.js';
 export * from './loader.js';
 export * from './validator.js';
 export * from './migration.js';
+export * from '../errors/types.js';
+export * from '../errors/result.js';
+export * from '../errors/factory.js';
+export * from '../errors/formatters.js';

@@ -3,6 +3,7 @@ import { loadPluginConfig } from '../../plugin-config.js';
 import { resolveScope } from '../../config.js';
 import type { PersonalityCommandContext } from './types.js';
 import { parseCommandArgs, buildSelectionPrompt, buildEditPrompt, applyFieldUpdate } from './utils.js';
+import { isFailure } from '../../errors/index.js';
 
 export async function handleEdit(ctx: PersonalityCommandContext): Promise<void> {
   const { args, configResult, output, projectDir, globalConfigDir } = ctx;
@@ -26,8 +27,8 @@ export async function handleEdit(ctx: PersonalityCommandContext): Promise<void> 
     return;
   }
 
-  const personality = loadPersonality(editName, projectDir, globalConfigDir);
-  if (!personality) {
+  const result = loadPersonality(editName, projectDir, globalConfigDir);
+  if (isFailure(result)) {
     output.parts.push({
       type: 'text',
       text: `Personality "${editName}" not found.\n\n${buildSelectionPrompt(available, pluginConfig.selectedPersonality)}`,
@@ -35,13 +36,21 @@ export async function handleEdit(ctx: PersonalityCommandContext): Promise<void> 
     return;
   }
 
+  const personality = result.data;
   const field = typeof parsed.flags.field === 'string' ? parsed.flags.field : null;
   const value = typeof parsed.flags.value === 'string' ? parsed.flags.value : null;
 
   if (field && value) {
     const currentConfig = mergeWithDefaults(personality.personality);
     const nextConfig = applyFieldUpdate(currentConfig, field, value);
-    savePersonalityFile(editName, nextConfig, scope, projectDir, globalConfigDir);
+    const saveResult = savePersonalityFile(editName, nextConfig, scope, projectDir, globalConfigDir);
+    if (!saveResult.success) {
+      output.parts.push({
+        type: 'text',
+        text: `Failed to update personality: ${saveResult.error.message}`,
+      });
+      return;
+    }
     output.parts.push({
       type: 'text',
       text: `Updated ${field} in ${editName} (${scope}).`,

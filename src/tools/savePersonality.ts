@@ -78,8 +78,10 @@ export function createSavePersonalityTool(
 
       const merged = mergeWithDefaults(config);
 
-      // Save the personality file
-      savePersonalityFile(name, merged, scope, projectDir, globalConfigDir);
+      const saveResult = savePersonalityFile(name, merged, scope, projectDir, globalConfigDir);
+      if (!saveResult.success) {
+        return `Error: Failed to save personality: ${saveResult.error.message}`;
+      }
 
       // Check if we should auto-select this personality
       const available = listPersonalities(projectDir, globalConfigDir);

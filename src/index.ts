@@ -21,6 +21,32 @@ import { createSavePersonalityTool } from './tools/savePersonality.js';
 import { handleMoodCommand } from './commands/mood.js';
 import { handlePersonalityCommand } from './commands/personality/index.js';
 
+import { createError, formatErrorForLogging } from './errors/index.js';
+import { isFailure, isSuccess } from './errors/index.js';
+
+function setupGlobalErrorHandler(): void {
+  process.on('unhandledRejection', (reason: unknown) => {
+    const error = createError(
+      'UNKNOWN_ERROR',
+      reason instanceof Error ? reason.message : String(reason),
+      { cause: reason }
+    );
+    console.error(formatErrorForLogging(error));
+  });
+
+  process.on('uncaughtException', (error: Error) => {
+    const appError = createError(
+      'UNKNOWN_ERROR',
+      error.message,
+      { cause: error }
+    );
+    console.error(formatErrorForLogging(appError));
+    process.exit(1);
+  });
+}
+
+setupGlobalErrorHandler();
+
 // Mutex for mood state updates to prevent race conditions
 let moodStateLock: Promise<void> | null = null;
 
@@ -260,7 +286,8 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
   await client.app.log({ body: { service: 'personality-plugin', level: 'info', message: `Selected personality: ${selectedName ?? 'none'}` } });
 
   // Load selected personality configuration
-  const personalityLoadResult = selectedName ? loadPersonality(selectedName, projectDir, globalConfigDir) : null;
+  const personalityResult = selectedName ? loadPersonality(selectedName, projectDir, globalConfigDir) : null;
+  const personalityLoadResult = personalityResult && personalityResult.success ? personalityResult.data : null;
 
   const config = personalityLoadResult?.personality ?? mergeWithDefaults({});
   const selectedSource = personalityLoadResult?.metadata.source ?? 'global';
@@ -341,9 +368,15 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
     'experimental.chat.system.transform': async (_hookInput, output) => {
       // Use mutex to prevent race conditions with event hook
       const state = await withMoodStateLock(async () => {
-        let currentState = loadMoodState(personalityLoadResult.path, config);
+        const moodLoadResult = loadMoodState(personalityLoadResult.path, config);
 
-        if (config.mood.enabled) {
+        if (isFailure(moodLoadResult)) {
+          await client.app.log({ body: { service: 'personality-plugin', level: 'warn', message: `Failed to load mood state: ${moodLoadResult.error.message}` } });
+        }
+
+        let currentState = isSuccess(moodLoadResult) ? moodLoadResult.data : null;
+
+        if (config.mood.enabled && currentState) {
           currentState = await driftMoodWithToast(
             personalityLoadResult.path,
             currentState,
@@ -357,6 +390,10 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
         return currentState;
       });
 
+      if (!state) {
+        return;
+      }
+
       const prompt = buildPersonalityPrompt(config, state.current, moods);
       output.system.push(`<personality>\n${prompt}\n</personality>`);
     },
@@ -367,8 +404,12 @@ const personalityPlugin: Plugin = async (input: PluginInput) => {
         if (msg.info?.sessionID && msg.info.role === 'assistant') {
           // Use mutex to prevent race conditions with transform hook
           await withMoodStateLock(async () => {
-            const state = loadMoodState(personalityLoadResult.path, config);
-            await driftMoodWithToast(personalityLoadResult.path, state, config, moods, config.mood.seed, client);
+            const moodLoadResult = loadMoodState(personalityLoadResult.path, config);
+            if (isFailure(moodLoadResult)) {
+              await client.app.log({ body: { service: 'personality-plugin', level: 'warn', message: `Failed to load mood state: ${moodLoadResult.error.message}` } });
+              return;
+            }
+            await driftMoodWithToast(personalityLoadResult.path, moodLoadResult.data, config, moods, config.mood.seed, client);
           });
         }
       }

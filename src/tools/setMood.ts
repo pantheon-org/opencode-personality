@@ -1,6 +1,7 @@
 import { tool } from '@opencode-ai/plugin';
 import type { PersonalityFile, MoodDefinition, PluginClient, MoodDuration } from '../types.js';
 import { loadMoodState, saveMoodState } from '../config.js';
+import { isFailure } from '../errors/index.js';
 
 export function createSetMoodTool(
   statePath: string,
@@ -20,7 +21,13 @@ export function createSetMoodTool(
         ),
     },
     async execute(args) {
-      const state = loadMoodState(statePath, config);
+      const moodLoadResult = loadMoodState(statePath, config);
+
+      if (isFailure(moodLoadResult)) {
+        return `Error loading mood state: ${moodLoadResult.error.message}`;
+      }
+
+      const state = moodLoadResult.data;
 
       if (!moods.some((item) => item.name === args.mood)) {
         return `Invalid mood. Choose from: ${moods.map((item) => item.name).join(', ')}`;
@@ -45,11 +52,9 @@ export function createSetMoodTool(
         state.overrideExpiry = null; // Permanent persists in state file
       }
 
-      try {
-        saveMoodState(statePath, state);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to save mood state: ${errorMessage}`);
+      const saveResult = saveMoodState(statePath, state);
+      if (isFailure(saveResult)) {
+        return `Error saving mood state: ${saveResult.error.message}`;
       }
 
       await client.app.log({

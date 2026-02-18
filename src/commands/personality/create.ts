@@ -31,7 +31,14 @@ export async function handleCreate(ctx: PersonalityCommandContext): Promise<void
       mood: { enabled: false, default: 'happy', drift: 0.2, override: null, toast: true },
     };
 
-    savePersonalityFile(presetName, template, scope, projectDir, globalConfigDir);
+    const saveResult = savePersonalityFile(presetName, template, scope, projectDir, globalConfigDir);
+    if (!saveResult.success) {
+      output.parts.push({
+        type: 'text',
+        text: `Failed to create personality: ${saveResult.error.message}`,
+      });
+      return;
+    }
 
     output.parts.push({
       type: 'text',
@@ -57,7 +64,14 @@ export async function handleCreate(ctx: PersonalityCommandContext): Promise<void
         mood: { enabled: false, default: 'happy', drift: 0.2, override: null, toast: true },
       };
 
-      savePersonalityFile(asPreset, template, scope, projectDir, globalConfigDir);
+      const saveResult = savePersonalityFile(asPreset, template, scope, projectDir, globalConfigDir);
+      if (!saveResult.success) {
+        output.parts.push({
+          type: 'text',
+          text: `Failed to create personality: ${saveResult.error.message}`,
+        });
+        return;
+      }
 
       output.parts.push({
         type: 'text',

@@ -1,5 +1,6 @@
 import type { PersonalityFile, MoodDefinition, ConfigResult, CommandOutput } from '../types.js';
 import { loadMoodState, saveMoodState } from '../config.js';
+import { isFailure } from '../errors/index.js';
 
 /**
  * Generate markdown content for the /mood command
@@ -22,7 +23,17 @@ export function handleMoodCommand(
   output: CommandOutput,
 ): void {
   const trimmed = args.trim().toLowerCase();
-  const state = loadMoodState(statePath, config);
+  const moodStateResult = loadMoodState(statePath, config);
+
+  if (isFailure(moodStateResult)) {
+    output.parts.push({
+      type: 'text',
+      text: `Error loading mood state: ${moodStateResult.error.message}`,
+    });
+    return;
+  }
+
+  const state = moodStateResult.data;
 
   if (!trimmed || trimmed === 'status') {
     output.parts.push({
@@ -44,13 +55,11 @@ export function handleMoodCommand(
   state.current = trimmed;
   state.overrideExpiry = null;
 
-  try {
-    saveMoodState(statePath, state);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+  const saveResult = saveMoodState(statePath, state);
+  if (isFailure(saveResult)) {
     output.parts.push({
       type: 'text',
-      text: `Error saving mood state: ${errorMessage}`,
+      text: `Error saving mood state: ${saveResult.error.message}`,
     });
     return;
   }
