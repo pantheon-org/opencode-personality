@@ -146,6 +146,75 @@ Always normalize state after loading to handle config changes:
 const normalized = normalizeState(state, defaultMood, moods);
 ```
 
+### Dependency Injection for File System Operations
+
+The codebase uses Dependency Injection (DI) for file system operations to enable testability:
+
+**File System Interface:**
+```typescript
+// src/infrastructure/file-system.ts
+export interface FileSystem {
+  readFile(path: string): Promise<string>;
+  readFileSync(path: string, encoding?: string): string;
+  writeFile(path: string, data: string, encoding?: string): Promise<void>;
+  writeFileSync(path: string, data: string, encoding?: string): void;
+  exists(path: string): Promise<boolean>;
+  existsSync(path: string): boolean;
+  mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
+  mkdirSync(path: string, options?: { recursive?: boolean }): void;
+  // ... other methods
+}
+```
+
+**Testing with In-Memory File System:**
+```typescript
+// src/infrastructure/memory-file-system.ts
+import { InMemoryFileSystem } from '../infrastructure/memory-file-system.js';
+
+describe('ConfigLoader', () => {
+  let fs: InMemoryFileSystem;
+
+  beforeEach(() => {
+    fs = new InMemoryFileSystem();
+    fs.setFile('/project/.opencode/personality.json', JSON.stringify({ name: 'Test' }));
+  });
+
+  it('loads config', async () => {
+    const loader = new FileSystemConfigLoader(fs);
+    const result = await loader.load('/project');
+    expect(result.config?.nameTest');
+  });
+).toBe('});
+```
+
+**Functions accepting optional FileSystem:**
+Most functions in `config.ts` accept an optional `fs` parameter:
+```typescript
+export function loadPersonalityFile(
+  name: string,
+  directory: string,
+  fs: FileSystem = defaultFileSystem,
+): PersonalityFile | null {
+  // Uses fs.readFileSync, fs.existsSync, etc.
+}
+```
+
+**Repository Pattern:**
+Use repositories for encapsulated data access:
+```typescript
+// src/personality/repository.ts
+export class PersonalityRepository {
+  constructor(
+    private directory: string,
+    private fs: FileSystem = defaultFileSystem,
+  ) {}
+
+  async findByName(name: string): Promise<PersonalityFile | null> {
+    // Uses this.fs for all operations
+  }
+}
+```
+
 ## Constraints
 
 - **Backward Compatible**: Accept old config formats, auto-migrate on first run

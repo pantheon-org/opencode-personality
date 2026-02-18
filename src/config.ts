@@ -1,10 +1,11 @@
 import type { PersonalityFile, ConfigResult, ConfigScope, MoodConfig, MoodDefinition, MoodState, MoodName, PersonalityMetadata, PersonalityLoadResult } from './types.js';
 import type { ResultOrFailure, AppResult } from './errors/index.js';
 import { success, failure, createError, errors } from './errors/index.js';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { validatePersonalityFile, formatValidationErrors } from './schema.js';
+import { defaultFileSystem, tryLoadJsonSync, ensureDirSync, saveJsonSync } from './infrastructure/file-system.js';
+import type { FileSystem } from './infrastructure/file-system.js';
 
 export const DEFAULT_MOOD_CONFIG: MoodConfig = {
   enabled: false,
@@ -70,9 +71,9 @@ export function deepMerge<T extends Record<string, unknown>>(target: T, source: 
   return result;
 }
 
-export function tryLoadJson<T>(filePath: string): T | null {
+export function tryLoadJson<T>(filePath: string, fs: FileSystem = defaultFileSystem): T | null {
   try {
-    const raw = readFileSync(filePath, 'utf-8');
+    const raw = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(raw) as T;
   } catch (error) {
     if ((error as { code?: string }).code === 'ENOENT') {
@@ -82,11 +83,11 @@ export function tryLoadJson<T>(filePath: string): T | null {
   }
 }
 
-export function ensureDir(filePath: string): void {
+export function ensureDir(filePath: string, fs: FileSystem = defaultFileSystem): void {
   const dir = dirname(filePath);
-  if (!existsSync(dir)) {
+  if (!fs.existsSync(dir)) {
     try {
-      mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true });
     } catch (error) {
       throw new Error(
         `Failed to create directory ${dir}: ${error instanceof Error ? error.message : String(error)}`,
@@ -108,21 +109,21 @@ export function getPersonalitiesDir(scope: ConfigScope, projectDir: string, glob
 /**
  * @deprecated Use `createPersonalityRepository(scope).findAll()` from personality/repository.ts
  */
-export function listPersonalities(projectDir: string, globalConfigDir: string): PersonalityMetadata[] {
+export function listPersonalities(projectDir: string, globalConfigDir: string, fs: FileSystem = defaultFileSystem): PersonalityMetadata[] {
   const personalities: Map<string, PersonalityMetadata> = new Map();
 
   // Load global personalities first
   const globalDir = getPersonalitiesDir('global', projectDir, globalConfigDir);
-  if (existsSync(globalDir)) {
-    for (const file of readdirSync(globalDir)) {
+  if (fs.existsSync(globalDir)) {
+    for (const file of fs.readdirSync(globalDir)) {
       if (!file.endsWith('.json')) continue;
 
       const name = file.slice(0, -5); // Remove .json
       const filePath = join(globalDir, file);
-      const content = tryLoadJson<PersonalityFile>(filePath);
+      const content = tryLoadJson<PersonalityFile>(filePath, fs);
 
       if (content) {
-        const stats = statSync(filePath);
+        const stats = fs.statSync(filePath);
         personalities.set(name, {
           name,
           description: content.description || '',
@@ -135,16 +136,16 @@ export function listPersonalities(projectDir: string, globalConfigDir: string): 
 
   // Override with project personalities (project takes precedence)
   const projectDir2 = getPersonalitiesDir('project', projectDir, globalConfigDir);
-  if (existsSync(projectDir2)) {
-    for (const file of readdirSync(projectDir2)) {
+  if (fs.existsSync(projectDir2)) {
+    for (const file of fs.readdirSync(projectDir2)) {
       if (!file.endsWith('.json')) continue;
 
       const name = file.slice(0, -5);
       const filePath = join(projectDir2, file);
-      const content = tryLoadJson<PersonalityFile>(filePath);
+      const content = tryLoadJson<PersonalityFile>(filePath, fs);
 
       if (content) {
-        const stats = statSync(filePath);
+        const stats = fs.statSync(filePath);
         personalities.set(name, {
           name,
           description: content.description || '',
@@ -163,13 +164,14 @@ export function loadPersonality(
   name: string,
   projectDir: string,
   globalConfigDir: string,
+  fs: FileSystem = defaultFileSystem,
 ): ResultOrFailure<PersonalityLoadResult> {
   // Try project first
   const projectPersonalitiesDir = getPersonalitiesDir('project', projectDir, globalConfigDir);
   const projectPath = join(projectPersonalitiesDir, `${name}.json`);
 
-  if (existsSync(projectPath)) {
-    const content = tryLoadJson<PersonalityFile>(projectPath);
+  if (fs.existsSync(projectPath)) {
+    const content = tryLoadJson<PersonalityFile>(projectPath, fs);
     if (content) {
       const validation = validatePersonalityFile(content);
 
@@ -182,7 +184,7 @@ export function loadPersonality(
       }
 
       const validatedData = validation.data as PersonalityFile;
-      const stats = statSync(projectPath);
+      const stats = fs.statSync(projectPath);
       const result: PersonalityLoadResult = {
         personality: validatedData,
         metadata: {
@@ -202,8 +204,8 @@ export function loadPersonality(
   const globalPersonalitiesDir = getPersonalitiesDir('global', projectDir, globalConfigDir);
   const globalPath = join(globalPersonalitiesDir, `${name}.json`);
 
-  if (existsSync(globalPath)) {
-    const content = tryLoadJson<PersonalityFile>(globalPath);
+  if (fs.existsSync(globalPath)) {
+    const content = tryLoadJson<PersonalityFile>(globalPath, fs);
     if (content) {
       const validation = validatePersonalityFile(content);
 
@@ -216,7 +218,7 @@ export function loadPersonality(
       }
 
       const validatedData = validation.data as PersonalityFile;
-      const stats = statSync(globalPath);
+      const stats = fs.statSync(globalPath);
       const result: PersonalityLoadResult = {
         personality: validatedData,
         metadata: {
@@ -242,12 +244,13 @@ export function savePersonalityFile(
   scope: ConfigScope,
   projectDir: string,
   globalConfigDir: string,
+  fs: FileSystem = defaultFileSystem,
 ): ResultOrFailure<void> {
   const personalitiesDir = getPersonalitiesDir(scope, projectDir, globalConfigDir);
   const filePath = join(personalitiesDir, `${name}.json`);
 
   try {
-    const existing = tryLoadJson<PersonalityFile>(filePath);
+    const existing = tryLoadJson<PersonalityFile>(filePath, fs);
     const fileContent: PersonalityFile = existing?.state ? { ...config, state: existing.state } : config;
 
     const validation = validatePersonalityFile(fileContent);
@@ -256,8 +259,8 @@ export function savePersonalityFile(
       return failure(errors.personalityInvalid(name, errorMessage));
     }
 
-    ensureDir(filePath);
-    writeFileSync(filePath, JSON.stringify(fileContent, null, 2));
+    ensureDir(filePath, fs);
+    fs.writeFileSync(filePath, JSON.stringify(fileContent, null, 2));
     return success(undefined);
   } catch (error) {
     return failure(errors.fileSystemError('save personality', filePath, error));
@@ -265,12 +268,12 @@ export function savePersonalityFile(
 }
 
 /** Delete a personality file */
-export function deletePersonality(name: string, scope: ConfigScope, projectDir: string, globalConfigDir: string): void {
+export function deletePersonality(name: string, scope: ConfigScope, projectDir: string, globalConfigDir: string, fs: FileSystem = defaultFileSystem): void {
   const personalitiesDir = getPersonalitiesDir(scope, projectDir, globalConfigDir);
   const filePath = join(personalitiesDir, `${name}.json`);
 
-  if (existsSync(filePath)) {
-    unlinkSync(filePath);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
   }
 }
 
@@ -282,39 +285,40 @@ export function migrateOldPersonalityFormat(
   scope: ConfigScope | string,
   projectDir: string,
   globalConfigDir: string,
+  fs: FileSystem = defaultFileSystem,
 ): boolean {
   const oldPath =
     scope === 'global'
       ? join(globalConfigDir, OLD_PERSONALITY_FILENAME)
       : join(projectDir, '.opencode', OLD_PERSONALITY_FILENAME);
 
-  if (!existsSync(oldPath)) {
+  if (!fs.existsSync(oldPath)) {
     return false;
   }
 
-  const oldConfig = tryLoadJson<PersonalityFile>(oldPath);
+  const oldConfig = tryLoadJson<PersonalityFile>(oldPath, fs);
   if (!oldConfig) {
     return false;
   }
 
   const personalityName = oldConfig.name || 'default';
 
-  const saveResult = savePersonalityFile(personalityName, oldConfig, scope as ConfigScope, projectDir, globalConfigDir);
+  const saveResult = savePersonalityFile(personalityName, oldConfig, scope as ConfigScope, projectDir, globalConfigDir, fs);
   if (!saveResult.success) {
     return false;
   }
 
-  unlinkSync(oldPath);
+  fs.unlinkSync(oldPath);
 
   return true;
 }
 
-export function loadConfigWithPrecedence(projectDir: string): ConfigResult {
+export function loadConfigWithPrecedence(projectDir: string, fs: FileSystem = defaultFileSystem): ConfigResult {
   const globalPath = join(homedir(), '.config', 'opencode', 'personality.json');
   const projectPath = join(projectDir, '.opencode', 'personality.json');
 
-  const globalFile = tryLoadJson<Partial<PersonalityFile>>(globalPath);
-  const projectFile = tryLoadJson<Partial<PersonalityFile>>(projectPath);
+  const globalFile = tryLoadJson<Partial<PersonalityFile>>(globalPath, fs);
+  const projectFile = tryLoadJson<Partial<PersonalityFile>>(projectPath, fs);
 
   const hasGlobal = globalFile !== null;
   const hasProject = projectFile !== null;
@@ -372,12 +376,12 @@ export function mergeWithDefaults(partial: Partial<PersonalityFile>): Personalit
   return merged;
 }
 
-export function writePersonalityFile(path: string, nextConfig: PersonalityFile): void {
-  ensureDir(path);
-  const existing = tryLoadJson<PersonalityFile>(path);
+export function writePersonalityFile(path: string, nextConfig: PersonalityFile, fs: FileSystem = defaultFileSystem): void {
+  ensureDir(path, fs);
+  const existing = tryLoadJson<PersonalityFile>(path, fs);
   const state = existing?.state;
   const file: PersonalityFile = state ? { ...nextConfig, state } : nextConfig;
-  writeFileSync(path, JSON.stringify(file, null, 2));
+  fs.writeFileSync(path, JSON.stringify(file, null, 2));
 }
 
 /**
@@ -398,14 +402,14 @@ export function resolveDefaultMood(config: PersonalityFile, moods: MoodDefinitio
   return firstMood.name;
 }
 
-export function resolveScope(flags: Record<string, string | boolean>, configResult: ConfigResult): ConfigScope {
+export function resolveScope(flags: Record<string, string | boolean>, configResult: ConfigResult, fs: FileSystem = defaultFileSystem): ConfigScope {
   const scopeFlag = typeof flags.scope === 'string' ? flags.scope.toLowerCase() : null;
   if (scopeFlag === 'global' || scopeFlag === 'project') {
     return scopeFlag;
   }
 
-  if (existsSync(configResult.projectPath)) return 'project';
-  if (existsSync(configResult.globalPath)) return 'global';
+  if (fs.existsSync(configResult.projectPath)) return 'project';
+  if (fs.existsSync(configResult.globalPath)) return 'global';
   return 'project';
 }
 
@@ -450,20 +454,20 @@ export function loadMoodState(statePath: string, config: PersonalityFile): Resul
 /**
  * @deprecated Use `createMoodStateRepository(statePath, config).save(state)` from mood/state.ts
  */
-export function saveMoodState(statePath: string, state: MoodState): ResultOrFailure<void> {
+export function saveMoodState(statePath: string, state: MoodState, fs: FileSystem = defaultFileSystem): ResultOrFailure<void> {
   try {
     const dir = dirname(statePath);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
-    const existing = tryLoadJson<PersonalityFile>(statePath);
+    const existing = tryLoadJson<PersonalityFile>(statePath, fs);
     if (!existing) {
       return success(undefined);
     }
     const file: PersonalityFile = { ...existing, state };
 
-    writeFileSync(statePath, JSON.stringify(file, null, 2));
+    fs.writeFileSync(statePath, JSON.stringify(file, null, 2));
     return success(undefined);
   } catch (error) {
     return failure(createError('FILE_SYSTEM_ERROR', error instanceof Error ? error.message : String(error)));
@@ -526,8 +530,9 @@ export function backupPersonality(
   scope: ConfigScope,
   projectDir: string,
   globalConfigDir: string,
+  fs: FileSystem = defaultFileSystem,
 ): string | null {
-  const result = loadPersonality(name, projectDir, globalConfigDir);
+  const result = loadPersonality(name, projectDir, globalConfigDir, fs);
   if (!result.success) {
     return null;
   }
@@ -538,8 +543,8 @@ export function backupPersonality(
   const backupName = `${name}-backup-${timestamp}`;
   const backupPath = join(backupsDir, `${backupName}.json`);
 
-  ensureDir(backupPath);
-  writeFileSync(backupPath, JSON.stringify(personality.personality, null, 2));
+  ensureDir(backupPath, fs);
+  fs.writeFileSync(backupPath, JSON.stringify(personality.personality, null, 2));
 
   return backupName;
 }
@@ -548,18 +553,19 @@ export function backupPersonality(
 export function listBackups(
   projectDir: string,
   globalConfigDir: string,
+  fs: FileSystem = defaultFileSystem,
 ): Array<{ name: string; scope: ConfigScope; createdAt: string }> {
   const backups: Array<{ name: string; scope: ConfigScope; createdAt: string }> = [];
 
   // Load global backups
   const globalBackupsDir = getBackupsDir('global', projectDir, globalConfigDir);
-  if (existsSync(globalBackupsDir)) {
-    for (const file of readdirSync(globalBackupsDir)) {
+  if (fs.existsSync(globalBackupsDir)) {
+    for (const file of fs.readdirSync(globalBackupsDir)) {
       if (!file.endsWith('.json')) continue;
 
       const name = file.slice(0, -5);
       const filePath = join(globalBackupsDir, file);
-      const stats = statSync(filePath);
+      const stats = fs.statSync(filePath);
 
       backups.push({
         name,
@@ -571,13 +577,13 @@ export function listBackups(
 
   // Load project backups
   const projectBackupsDir = getBackupsDir('project', projectDir, globalConfigDir);
-  if (existsSync(projectBackupsDir)) {
-    for (const file of readdirSync(projectBackupsDir)) {
+  if (fs.existsSync(projectBackupsDir)) {
+    for (const file of fs.readdirSync(projectBackupsDir)) {
       if (!file.endsWith('.json')) continue;
 
       const name = file.slice(0, -5);
       const filePath = join(projectBackupsDir, file);
-      const stats = statSync(filePath);
+      const stats = fs.statSync(filePath);
 
       backups.push({
         name,
@@ -596,15 +602,16 @@ export function restorePersonality(
   scope: ConfigScope,
   projectDir: string,
   globalConfigDir: string,
+  fs: FileSystem = defaultFileSystem,
 ): { success: boolean; name?: string; error?: string } {
   const backupsDir = getBackupsDir(scope, projectDir, globalConfigDir);
   const backupPath = join(backupsDir, `${backupName}.json`);
 
-  if (!existsSync(backupPath)) {
+  if (!fs.existsSync(backupPath)) {
     return { success: false, error: `Backup "${backupName}" not found in ${scope} scope` };
   }
 
-  const content = tryLoadJson<PersonalityFile>(backupPath);
+  const content = tryLoadJson<PersonalityFile>(backupPath, fs);
   if (!content) {
     return { success: false, error: `Failed to read backup file "${backupName}"` };
   }
@@ -612,7 +619,7 @@ export function restorePersonality(
   const match = backupName.match(/^(.+)-backup-\d+$/);
   const personalityName = (match && match[1]) || backupName;
 
-  const saveResult = savePersonalityFile(personalityName, content, scope, projectDir, globalConfigDir);
+  const saveResult = savePersonalityFile(personalityName, content, scope, projectDir, globalConfigDir, fs);
   if (!saveResult.success) {
     return { success: false, error: saveResult.error.message };
   }

@@ -206,6 +206,7 @@ export function createPersonalityRepository(
   projectDir: string,
   globalConfigDir: string,
   scope: 'global' | 'project' = 'project',
+  fs?: FileSystem,
 ): PersonalityRepository {
-  return new FileSystemPersonalityRepository(projectDir, globalConfigDir, scope);
+  return new FileSystemPersonalityRepository(projectDir, globalConfigDir, scope, fs ?? defaultFileSystem);
 }

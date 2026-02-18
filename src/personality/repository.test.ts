@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach, jest } from 'bun:test';
+import { describe, test, expect, beforeEach } from 'bun:test';
 import { FileSystemPersonalityRepository } from './repository.js';
+import { InMemoryFileSystem } from '../infrastructure/memory-file-system.js';
 import type { PersonalityFile, PersonalityMetadata } from './types.js';
 
 const mockPersonality: PersonalityFile = {
@@ -17,51 +18,20 @@ const mockPersonality: PersonalityFile = {
   },
 };
 
-const mockMetadata: PersonalityMetadata = {
-  name: 'test-person',
-  description: 'A test personality',
-  source: 'project',
-  modifiedAt: '2024-01-01T00:00:00.000Z',
-};
-
-const mockFs = {
-  exists: jest.fn(async (path: string) => path.includes('exists-true')),
-  readFile: jest.fn(async (path: string) => {
-    if (path.includes('exists-true')) {
-      return JSON.stringify(mockPersonality);
-    }
-    throw new Error('ENOENT');
-  }),
-  writeFile: jest.fn(async () => {}),
-  unlink: jest.fn(async () => {}),
-  mkdir: jest.fn(async () => {}),
-  readdir: jest.fn(async () => ['test-person.json', 'another.json']),
-  stat: jest.fn(async () => ({
-    mtime: new Date('2024-01-01'),
-    ctime: new Date('2024-01-01'),
-    size: 100,
-  })),
-};
-
 describe('FileSystemPersonalityRepository', () => {
+  let fs: InMemoryFileSystem;
   let repository: FileSystemPersonalityRepository;
   let tempDir: string;
 
   beforeEach(() => {
+    fs = new InMemoryFileSystem();
     tempDir = '/tmp/test-repo-' + Date.now();
     
-    jest.spyOn(mockFs, 'exists');
-    jest.spyOn(mockFs, 'readFile');
-    jest.spyOn(mockFs, 'writeFile');
-    jest.spyOn(mockFs, 'unlink');
-    jest.spyOn(mockFs, 'readdir');
-    jest.spyOn(mockFs, 'stat');
-
     repository = new FileSystemPersonalityRepository(
       tempDir,
       '/tmp/global',
       'project',
-      mockFs as any,
+      fs,
     );
   });
 
@@ -72,14 +42,20 @@ describe('FileSystemPersonalityRepository', () => {
     });
 
     test('returns personality when it exists', async () => {
-      const result = await repository.findByName('exists-true');
+      fs.setDirectory(tempDir + '/.opencode/personalities');
+      fs.setFile(tempDir + '/.opencode/personalities/test-person.json', JSON.stringify(mockPersonality));
+
+      const result = await repository.findByName('test-person');
       expect(result).not.toBeNull();
       expect(result?.personality.name).toBe('test-person');
     });
   });
 
   describe('findAll', () => {
-    test.skip('returns list of personalities', async () => {
+    test('returns list of personalities', async () => {
+      fs.setDirectory(tempDir + '/.opencode/personalities');
+      fs.setFile(tempDir + '/.opencode/personalities/test-person.json', JSON.stringify(mockPersonality));
+
       const result = await repository.findAll();
       expect(result.length).toBeGreaterThanOrEqual(1);
       expect(result[0]?.name).toBe('test-person');
@@ -88,6 +64,9 @@ describe('FileSystemPersonalityRepository', () => {
 
   describe('exists', () => {
     test('returns true when personality exists', async () => {
+      fs.setDirectory(tempDir + '/.opencode/personalities');
+      fs.setFile(tempDir + '/.opencode/personalities/exists-true.json', JSON.stringify(mockPersonality));
+
       const result = await repository.exists('exists-true');
       expect(result).toBe(true);
     });
@@ -101,14 +80,20 @@ describe('FileSystemPersonalityRepository', () => {
   describe('save', () => {
     test('writes personality to file', async () => {
       await repository.save('new-person', mockPersonality);
-      expect(mockFs.writeFile).toHaveBeenCalled();
+      const exists = await fs.exists(tempDir + '/.opencode/personalities/new-person.json');
+      expect(exists).toBe(true);
     });
   });
 
   describe('delete', () => {
     test('removes personality file', async () => {
-      await repository.delete('exists-true');
-      expect(mockFs.unlink).toHaveBeenCalled();
+      fs.setDirectory(tempDir + '/.opencode/personalities');
+      fs.setFile(tempDir + '/.opencode/personalities/to-delete.json', JSON.stringify(mockPersonality));
+
+      await repository.delete('to-delete');
+      
+      const exists = await fs.exists(tempDir + '/.opencode/personalities/to-delete.json');
+      expect(exists).toBe(false);
     });
   });
 });
