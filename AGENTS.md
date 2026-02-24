@@ -85,9 +85,12 @@ src/
 ### Adding a New Command
 
 1. Create handler in `src/commands/`
-2. Import and wire up in `src/index.ts` `command.execute.before` hook
-3. Register in `opencode.json` command definitions
-4. Document in README
+2. Add command markdown generator function (returns frontmatter + description)
+3. Register command in `src/commands/install.ts` `COMMANDS` array
+4. Import and wire up handler in `src/index.ts` `command.execute.before` hook
+5. Document in README
+
+Commands are auto-installed via `installCommands()` - no manual `opencode.json` registration needed.
 
 ### Adding a New Default Personality
 
